@@ -1,0 +1,20 @@
+# Node
+node_modules/
+backend/.env
+npm-debug.log*
+
+# Flutter / Dart
+frontend/.dart_tool/
+frontend/build/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.idea/
+frontend/*.iml
+frontend/android/.gradle/
+frontend/android/local.properties
+
+# Tools
+.playwright-mcp/
+screenshots/tmp/
+.DS_Store
+Thumbs.db
