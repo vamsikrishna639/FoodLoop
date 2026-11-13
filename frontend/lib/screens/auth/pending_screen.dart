@@ -31,7 +31,7 @@ class _PendingScreenState extends State<PendingScreen> {
       await auth.refreshUser();
       // If approved, the router has already moved on; otherwise say so.
       if (mounted && !(auth.user?.isApproved ?? false)) {
-        showSlip(context, 'Still in the queue. An admin has not reviewed it yet.');
+        showSlip(context, 'Still in the queue. An admin has not reviewed it yet.', note: true);
       }
     } on ApiException catch (e) {
       if (mounted) showSlip(context, e.message, error: true);

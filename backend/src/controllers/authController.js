@@ -16,7 +16,12 @@ exports.register = asyncHandler(async (req, res) => {
   const { name, email, password, role, phone, organization } = req.body;
 
   const exists = await User.findOne({ email });
-  if (exists) throw new ApiError(409, 'An account with this email already exists');
+  if (exists) {
+    // Sent as a field error (same shape as validation errors) so the app can
+    // show it under the email input.
+    const message = 'An account with this email already exists';
+    throw new ApiError(409, message, { errors: { email: message } });
+  }
 
   const passwordHash = await bcrypt.hash(password, 10);
 

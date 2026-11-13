@@ -12,6 +12,7 @@ class Pressable extends StatefulWidget {
     this.semanticLabel,
     this.selected,
     this.focusRadius = FlRadius.slip,
+    this.onBoard = false,
   });
 
   final VoidCallback? onTap;
@@ -21,6 +22,10 @@ class Pressable extends StatefulWidget {
   final String? semanticLabel;
   final bool? selected;
   final double focusRadius;
+
+  /// True for items on the dark chalkboard (sidebar, rail). An ink focus ring
+  /// would be invisible there, so the ring is drawn in turmeric instead.
+  final bool onBoard;
 
   @override
   State<Pressable> createState() => _PressableState();
@@ -65,7 +70,9 @@ class _PressableState extends State<Pressable> {
               position: DecorationPosition.foreground,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(widget.focusRadius),
-                border: _focused ? Border.all(color: fl.ink, width: 2) : null,
+                border: _focused
+                    ? Border.all(color: widget.onBoard ? fl.turmeric : fl.ink, width: widget.onBoard ? 3 : 2)
+                    : null,
               ),
               child: widget.builder(context, _hovered && enabled),
             ),

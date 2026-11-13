@@ -4,8 +4,10 @@ import 'package:material_ui/material_ui.dart';
 
 import '../core/theme/tokens.dart';
 
-/// Shows a slip at the bottom of the screen. Set [error] for failures.
-void showSlip(BuildContext context, String message, {bool error = false}) {
+/// Shows a slip at the bottom of the screen. Set [error] for failures and
+/// [note] for plain information that is neither a success nor a failure
+/// ("Still in the queue"). With neither, the slip reads DONE.
+void showSlip(BuildContext context, String message, {bool error = false, bool note = false}) {
   final messenger = ScaffoldMessenger.maybeOf(context);
   if (messenger == null) return;
   final wide = MediaQuery.sizeOf(context).width >= 600;
@@ -19,21 +21,26 @@ void showSlip(BuildContext context, String message, {bool error = false}) {
         // On wide screens the slip is a fixed width, not a full-width bar.
         width: wide ? 420 : null,
         margin: wide ? null : const EdgeInsets.all(FlSpace.lg),
-        content: _Slip(message: message, error: error),
+        content: _Slip(message: message, error: error, note: note),
       ),
     );
 }
 
 class _Slip extends StatelessWidget {
-  const _Slip({required this.message, required this.error});
+  const _Slip({required this.message, required this.error, required this.note});
   final String message;
   final bool error;
+  final bool note;
 
   @override
   Widget build(BuildContext context) {
     final fl = context.fl;
     // The slip is always "ink" coloured: dark in light mode, light in dark mode.
-    final mark = error ? fl.chilli : fl.turmeric;
+    final (Color mark, String word) = error
+        ? (fl.chilli, 'NOT DONE')
+        : note
+            ? (fl.paper, 'NOTE')
+            : (fl.turmeric, 'DONE');
 
     return Semantics(
       liveRegion: true, // screen readers announce it without moving focus
@@ -53,7 +60,7 @@ class _Slip extends StatelessWidget {
                 border: Border.all(color: mark, width: 1.5),
                 borderRadius: BorderRadius.circular(FlRadius.stamp),
               ),
-              child: Text(error ? 'NOT DONE' : 'DONE', style: fl.monoSmall.copyWith(color: mark)),
+              child: Text(word, style: fl.monoSmall.copyWith(color: mark)),
             ),
             const SizedBox(width: FlSpace.md),
             Expanded(child: Text(message, style: fl.mono.copyWith(color: fl.paper))),

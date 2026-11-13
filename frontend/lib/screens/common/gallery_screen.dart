@@ -118,7 +118,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                           deadline: _in(const Duration(hours: 3, minutes: 59)),
                           foodType: FoodType.nonVeg,
                           stamp: StampKind.available,
-                          onTap: () => showSlip(context, 'Token FL-0003 tapped.'),
+                          onTap: () => showSlip(context, 'Token FL-0003 tapped.', note: true),
                         ),
                         TokenCard(
                           title: 'Veg Grilled Sandwiches',
@@ -130,7 +130,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                           deadline: _in(const Duration(minutes: 45)),
                           foodType: FoodType.veg,
                           stamp: StampKind.available,
-                          onTap: () => showSlip(context, 'Token FL-0004 tapped.'),
+                          onTap: () => showSlip(context, 'Token FL-0004 tapped.', note: true),
                         ),
                         TokenCard(
                           title: 'Samosa and Chutney',
@@ -142,7 +142,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                           deadline: _in(const Duration(minutes: 12)),
                           foodType: FoodType.veg,
                           stamp: StampKind.available,
-                          onTap: () => showSlip(context, 'Token FL-0005 tapped.'),
+                          onTap: () => showSlip(context, 'Token FL-0005 tapped.', note: true),
                         ),
                         TokenCard(
                           title: 'Mixed Lunch Thali with Rice, Dal, Sabzi, Egg Curry and Roti',
@@ -154,7 +154,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                           deadline: _in(const Duration(hours: 2)),
                           foodType: FoodType.mixed,
                           stamp: StampKind.reserved,
-                          onTap: () => showSlip(context, 'Token FL-0006 tapped.'),
+                          onTap: () => showSlip(context, 'Token FL-0006 tapped.', note: true),
                         ),
                         TokenCard(
                           title: 'Curd Rice',
@@ -303,6 +303,11 @@ class _GalleryScreenState extends State<GalleryScreen> {
                           onPressed: () => showSlip(context, 'Request sent to Main Block Canteen.'),
                         ),
                         FlButton(
+                          label: 'Note slip',
+                          variant: FlButtonVariant.outline,
+                          onPressed: () => showSlip(context, 'Still in the queue.', note: true),
+                        ),
+                        FlButton(
                           label: 'Error slip',
                           variant: FlButtonVariant.outline,
                           onPressed: () =>
@@ -329,7 +334,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                         ),
                         EmptyState.error(
                           message: 'Could not reach the FoodLoop server. Check that it is running.',
-                          onRetry: () => showSlip(context, 'Tried again.'),
+                          onRetry: () => showSlip(context, 'Tried again.', note: true),
                         ),
                       ],
                     ),

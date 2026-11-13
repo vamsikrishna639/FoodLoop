@@ -113,20 +113,25 @@ class TokenCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Marker on the left, stamp on the right. The stamp wraps
-                // below on very narrow cards instead of overflowing.
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: FlSpace.sm,
-                  runSpacing: FlSpace.sm,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 3),
-                      child: VegMarker(type: foodType, showLabel: true),
-                    ),
-                    StatusStamp(stamp, scale: 0.92),
-                  ],
+                // Marker on the left, stamp in the right corner. The Wrap is
+                // given the full width so spaceBetween can push them apart;
+                // on very narrow cards the stamp wraps below instead of
+                // overflowing.
+                SizedBox(
+                  width: double.infinity,
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: FlSpace.sm,
+                    runSpacing: FlSpace.sm,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: VegMarker(type: foodType, showLabel: true),
+                      ),
+                      StatusStamp(stamp, scale: 0.92),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: FlSpace.sm),
                 Text(
@@ -178,8 +183,10 @@ class TokenCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: FlSpace.md),
-                  // Finished listings have no countdown to show.
-                  if (stamp != StampKind.completed) DeadlineClock(deadline: deadline),
+                  // Finished and expired listings have no countdown to show;
+                  // the stamp above already says so.
+                  if (stamp != StampKind.completed && stamp != StampKind.expired)
+                    DeadlineClock(deadline: deadline),
                 ],
               ),
             ),

@@ -114,9 +114,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               builder: (context, box) {
                 // Two slips per row; a single column only when text is very large.
                 final perRow = box.maxWidth >= 300 ? 2 : 1;
-                final w = (box.maxWidth - FlSpace.md * (perRow - 1)) / perRow;
+                // The gap is wider than two notches, so the cut-outs of
+                // neighbouring slips do not touch.
+                final w = (box.maxWidth - FlSpace.xl * (perRow - 1)) / perRow;
                 return Wrap(
-                  spacing: FlSpace.md,
+                  spacing: FlSpace.xl,
                   runSpacing: FlSpace.md,
                   children: [
                     for (final role in UserRole.values)
@@ -177,6 +179,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.email],
+                // A server message such as "already exists" belongs to the old
+                // value, so drop it as soon as the email is edited.
+                onChanged: (_) {
+                  if (_serverErrors.containsKey('email')) {
+                    setState(() => _serverErrors = Map.of(_serverErrors)..remove('email'));
+                  }
+                },
                 validator: _check('email', (v) {
                   if (v.isEmpty) return 'Enter your email';
                   if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v)) {

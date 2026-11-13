@@ -50,16 +50,17 @@ class ReceiptTimeline extends StatelessWidget {
           color: fl.surface,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(FlSpace.lg, FlSpace.xl, FlSpace.lg, FlSpace.xl),
-            child: Stack(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisSize: MainAxisSize.min,
+                // The title leads; the receipt type and number print under it.
+                // The stamp sits beside it in the corner, so a long title
+                // wraps instead of running underneath the stamp.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // The title leads; the receipt type and number print under it.
-                    // Room is left on the right so the stamp never covers text.
-                    Padding(
-                      padding: EdgeInsets.only(right: stamp == null ? 0 : 104),
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -72,20 +73,22 @@ class ReceiptTimeline extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: FlSpace.md),
-                    DottedLine(color: fl.controlBorder, dot: 4, gap: 3, height: 1),
-                    const SizedBox(height: FlSpace.md),
-                    for (final e in entries) _ReceiptRow(entry: e),
-                    if (footer != null) ...[
-                      const SizedBox(height: FlSpace.sm),
-                      DottedLine(color: fl.controlBorder, dot: 4, gap: 3, height: 1),
-                      const SizedBox(height: FlSpace.md),
-                      Text(footer!.toUpperCase(),
-                          textAlign: TextAlign.center, style: fl.monoSmall),
+                    if (stamp != null) ...[
+                      const SizedBox(width: FlSpace.md),
+                      Padding(padding: const EdgeInsets.only(top: 6), child: stamp!),
                     ],
                   ],
                 ),
-                if (stamp != null) Positioned(right: 0, top: 6, child: stamp!),
+                const SizedBox(height: FlSpace.md),
+                DottedLine(color: fl.controlBorder, dot: 4, gap: 3, height: 1),
+                const SizedBox(height: FlSpace.md),
+                for (final e in entries) _ReceiptRow(entry: e),
+                if (footer != null) ...[
+                  const SizedBox(height: FlSpace.sm),
+                  DottedLine(color: fl.controlBorder, dot: 4, gap: 3, height: 1),
+                  const SizedBox(height: FlSpace.md),
+                  Text(footer!.toUpperCase(), textAlign: TextAlign.center, style: fl.monoSmall),
+                ],
               ],
             ),
           ),
@@ -113,19 +116,29 @@ class _ReceiptRow extends StatelessWidget {
       child: ExcludeSemantics(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 5),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Flexible(child: Text(entry.label, style: style)),
-              // The dotted leader fills whatever space is left.
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(6, 0, 6, 5),
-                  child: DottedLine(color: fl.perforation, dot: 2, gap: 4),
+          // LayoutBuilder gives the row's width, so the label and the value
+          // can each be capped. The dotted leader then fills what is left and
+          // the value always ends at the right edge, like a printed receipt.
+          child: LayoutBuilder(
+            builder: (context, box) => Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: box.maxWidth * 0.36),
+                  child: Text(entry.label, style: style),
                 ),
-              ),
-              Text(entry.value ?? '--:--', style: style),
-            ],
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 0, 6, 5),
+                    child: DottedLine(color: fl.perforation, dot: 2, gap: 4),
+                  ),
+                ),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: box.maxWidth * 0.6),
+                  child: Text(entry.value ?? '--:--', style: style, textAlign: TextAlign.right),
+                ),
+              ],
+            ),
           ),
         ),
       ),

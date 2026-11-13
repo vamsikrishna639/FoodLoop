@@ -208,6 +208,7 @@ class _SideAction extends StatelessWidget {
       onTap: action.onTap,
       semanticLabel: action.label,
       focusRadius: FlRadius.control,
+      onBoard: true,
       builder: (context, hovered) => Container(
         height: compact ? 56 : 48,
         width: compact ? 56 : double.infinity,
@@ -261,6 +262,7 @@ class _SideItem extends StatelessWidget {
             ? '${destination.label}, ${destination.badge} unread'
             : destination.label,
         focusRadius: FlRadius.control,
+        onBoard: true,
         builder: (context, hovered) => AnimatedContainer(
           duration: FlMotion.of(context, FlMotion.fast),
           constraints: const BoxConstraints(minHeight: 48),
@@ -308,6 +310,7 @@ class _UserChip extends StatelessWidget {
       onTap: onTap,
       semanticLabel: 'Profile and settings for ${user.name}',
       focusRadius: FlRadius.control,
+      onBoard: true,
       builder: (context, hovered) => Container(
         constraints: const BoxConstraints(minHeight: 56),
         padding: const EdgeInsets.all(FlSpace.sm),
@@ -466,7 +469,8 @@ class _RaisedAction extends StatelessWidget {
               Text(action.label,
                   maxLines: 1,
                   style: context.text.labelSmall?.copyWith(color: fl.ink, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 10),
+              // Lines this label up with the labels of the tabs beside it.
+              const SizedBox(height: 15),
             ],
           ),
         ),

@@ -23,8 +23,9 @@ class AuthLayout extends StatelessWidget {
 
     final formArea = SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(gutter, split ? FlSpace.huge : FlSpace.xl, gutter, FlSpace.xxxl),
+      // Left-aligned at every width, in line with the logo above it.
       child: Align(
-        alignment: split ? Alignment.topLeft : Alignment.topCenter,
+        alignment: Alignment.topLeft,
         child: ConstrainedBox(constraints: BoxConstraints(maxWidth: formMaxWidth), child: form),
       ),
     );
@@ -32,6 +33,8 @@ class AuthLayout extends StatelessWidget {
     if (split) {
       return Scaffold(
         body: Row(
+          // Stretch, so the form starts at the top instead of being centred.
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // The board takes a little under half the screen, capped so the
             // form never ends up far away from it on very wide monitors.

@@ -68,7 +68,11 @@ GoRouter buildRouter(AuthProvider auth) {
 
       switch (auth.status) {
         case AuthStatus.restoring:
-          return path == '/splash' ? null : '/splash';
+          // Wait on the splash screen while the saved session is checked, and
+          // remember the page that was asked for (e.g. after a browser
+          // refresh on /profile) so the user can be sent back to it.
+          if (path == '/splash') return null;
+          return Uri(path: '/splash', queryParameters: {'from': state.uri.toString()}).toString();
 
         case AuthStatus.signedOut:
           return (path == '/login' || path == '/register') ? null : '/login';
@@ -77,8 +81,16 @@ GoRouter buildRouter(AuthProvider auth) {
           final user = auth.user!;
           // Pending and rejected accounts only ever see the waiting screen.
           if (!user.isApproved) return path == '/pending' ? null : '/pending';
+          // Session restored: go back to the page that was asked for. The
+          // redirect runs again on that page, so the role check below still
+          // applies to it.
+          if (path == '/splash') {
+            final from = state.uri.queryParameters['from'];
+            if (from != null && from.startsWith('/') && !from.startsWith('/splash')) return from;
+            return '/home';
+          }
           // Approved users have no business on the entry screens.
-          if (const {'/splash', '/login', '/register', '/pending'}.contains(path)) return '/home';
+          if (const {'/login', '/register', '/pending'}.contains(path)) return '/home';
           // Role-based access: e.g. a recipient typing /approvals goes home.
           if (!_allowed[user.role]!.contains(path)) return '/home';
           return null;
@@ -185,7 +197,7 @@ ShellAction? _actionFor(BuildContext context, UserRole role) => switch (role) {
       UserRole.donor => ShellAction(
           label: 'Post food',
           icon: Icons.add,
-          onTap: () => showSlip(context, 'Posting food is built in Stage 2.'),
+          onTap: () => showSlip(context, 'Posting food is built in Stage 2.', note: true),
         ),
       UserRole.recipient => ShellAction(
           label: 'Browse',

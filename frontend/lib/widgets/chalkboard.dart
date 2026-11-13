@@ -69,27 +69,31 @@ class ChalkItem extends StatelessWidget {
     final fl = context.fl;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: FlSpace.sm),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: context.text.titleLarge?.copyWith(color: fl.chalk)),
-                if (note != null)
-                  Text(note!, style: fl.monoSmall.copyWith(color: fl.chalkSoft)),
-              ],
+      // The name may use up to 62% of the line. The dotted leader fills the
+      // rest, so the quantity always ends at the right edge of the board.
+      child: LayoutBuilder(
+        builder: (context, box) => Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: box.maxWidth * 0.62),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name, style: context.text.titleLarge?.copyWith(color: fl.chalk)),
+                  if (note != null) Text(note!, style: fl.monoSmall.copyWith(color: fl.chalkSoft)),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(FlSpace.sm, 0, FlSpace.sm, 6),
-              child: DottedLine(color: fl.chalkSoft.withValues(alpha: 0.5), dot: 2, gap: 5),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(FlSpace.sm, 0, FlSpace.sm, 6),
+                child: DottedLine(color: fl.chalkSoft.withValues(alpha: 0.5), dot: 2, gap: 5),
+              ),
             ),
-          ),
-          Text(trailing, style: fl.mono.copyWith(color: fl.chalk, fontWeight: FontWeight.w700)),
-        ],
+            Text(trailing, style: fl.mono.copyWith(color: fl.chalk, fontWeight: FontWeight.w700)),
+          ],
+        ),
       ),
     );
   }
