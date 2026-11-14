@@ -17,14 +17,14 @@ the canteen's own area is a chalkboard. The full design system is in
 
 ## Build status
 
-The app is built in five stages. **Stages 1, 2 and 3 are complete.**
+The app is built in five stages. **Stages 1 to 4 are complete.**
 
 | Stage | Contents | Status |
 |---|---|---|
 | 1 | Design system, component gallery, auth, role-based shell | Done |
 | 2 | Food listings: post, edit, delete, browse, detail; welcome slides | Done |
 | 3 | Claim workflow: request, approve, reject, cancel; My requests | Done |
-| 4 | Volunteers, notifications, dashboards | Not started |
+| 4 | Volunteers, notifications, dashboards, approvals | Done |
 | 5 | Testing and polish | Not started |
 
 What works today:
@@ -48,10 +48,32 @@ What works today:
   sheet on phones, dialog on wider screens), and **Listings** with Open /
   Closed tabs, Edit and Delete. Approving a request drops an APPROVED rubber
   stamp onto it (skipped when the device asks for reduced motion).
+- **Volunteer (Pickups):** every run printed as a pickup slip (what to
+  carry, from where, to whom, their phone, pickup deadline, and the
+  assigned / picked up / delivered times). One large button per run:
+  **I've collected it**, then **Mark delivered**. An assigned run can be
+  handed back ("Can't do this run"); it returns to the admin's list.
+  Tabs: Assigned, On the way, Delivered.
+- **Admin (Overview):** portions delivered so far as one large figure, a
+  7-day bar chart of portions delivered per day, the **Needs a volunteer**
+  list of approved requests with **Assign volunteer** (a dialog, or a bottom
+  sheet on phones, listing volunteers with how many runs each has on), and a
+  printed "Right now" tally.
+- **Admin (Approvals):** new accounts with Approve and Reject; a table on
+  wide screens, slips on phones. Approved users are notified.
 - **Admin:** "All listings", with the same Edit and Delete.
-
-Pages for Stage 4 (alerts, approvals, volunteer and admin homes) still show a
-stand-in that names the stage where they arrive.
+- **Alerts (every role):** notifications grouped by day, unread ones marked
+  with a dot and the word NEW; tap one to mark it read, or **Mark all read**.
+  The unread count shows on the bell in the navigation.
+- **Activity (desktop):** the right-hand rail lists recent events, limited to
+  what each role may see (the admin sees everything; a donor sees their own
+  listings; recipients and volunteers see their own requests or runs, plus
+  newly posted food for recipients). It refreshes every 20 seconds, and stops
+  while the browser tab or app is in the background.
+- **Food counts only once delivered:** every "delivered" figure (the welcome
+  page, the admin's number and chart, the donor's tally, "portions received"
+  on My requests, the volunteer's "portions carried") counts delivered
+  pickups only.
 
 ## What you need
 
@@ -141,8 +163,15 @@ What the seed sets up for the claim workflow:
   so she can still cancel it) and Farhan's pending request for 5.
 - **Mixed Lunch Thali** is fully reserved by Farhan, and the food is already
   picked up, so his request can no longer be cancelled.
-- **Dal Tadka** has a turned-down request (Farhan) and a cancelled one
-  (Ananya); both of them can ask again.
+- **Dal Tadka** has Farhan's turned-down request, Ananya's cancelled one,
+  and Farhan's second request (3 kg), which is approved and has **no
+  volunteer yet**. It is the item in the admin's "Needs a volunteer" list.
+- **Kiran** has one assigned run (Ananya's biryani); **Meera** has one
+  picked-up run (Farhan's thali). Mark Meera's delivered and the thali
+  listing becomes completed.
+- Four delivered runs over the past week (Rajma Chawal, Poha and Chai, Veg
+  Pulao, Idli Sambar) fill the 7-day chart: 112 portions in all.
+- **Rohit** is waiting in Approvals.
 
 ## Component gallery
 
@@ -161,24 +190,33 @@ backend/
     server.js         loads .env, connects to MongoDB, listens
     config/           database connection
     models/           User, FoodListing, ClaimRequest, Pickup, Notification, Counter
-    controllers/      request handlers (auth, foods, claims, impact)
+    controllers/      request handlers (auth, foods, claims, pickups, users,
+                      notifications, dashboard + activity, impact)
     routes/           routes and validation rules
     middleware/       auth (protect, requireApproved, requireRole), validate, errorHandler
-    utils/            response envelope, ApiError, listing expiry sweep,
-                      allowed status changes (transitions.js), notifications
+    utils/            response envelope, ApiError, listing expiry and
+                      completion, allowed status changes (transitions.js),
+                      notifications, quantity wording
   seed/seed.js        demo data
 
 frontend/lib/
   core/               theme tokens, router, API client, config, breakpoints, date formats
-  models/             data classes (user, food listing, claim request)
-  services/           API calls (auth, food, claims)
-  providers/          app state (auth, theme, recipient feed, donor listings, claims)
-  screens/            auth, common (welcome, profile), recipient (counter, detail,
-                      my requests), donor (board, request queue, listings, form)
-  widgets/            TokenCard, StatusStamp, StampDrop, ReceiptTimeline, ResponsiveShell and the rest
+  models/             data classes (user, food listing, claim request, pickup,
+                      notification, activity event, dashboard)
+  services/           API calls (auth, food, claims, pickups, notifications,
+                      admin, dashboard)
+  providers/          app state (auth, theme, feed, listings, claims, pickups,
+                      notifications, activity, dashboard, admin) and
+                      live_updates.dart, the foreground-only poller
+  screens/            auth, common (welcome, profile, alerts), recipient (counter,
+                      detail, my requests), donor (board, request queue, listings,
+                      form), volunteer (pickups), admin (overview, assign sheet,
+                      approvals)
+  widgets/            TokenCard, StatusStamp, StampDrop, ReceiptTimeline, ResponsiveShell,
+                      ActivityRail, DeliveriesChart and the rest
 ```
 
-## API so far
+## API
 
 Every response has the shape `{ success, message, data }`. Validation
 failures also carry `data.errors`, a `{ field: message }` map.
@@ -202,6 +240,17 @@ failures also carry `data.errors`, a `{ field: message }` map.
 | PATCH | `/api/claims/:id/approve` | donor (own listing) |
 | PATCH | `/api/claims/:id/reject` | donor (own listing) |
 | PATCH | `/api/claims/:id/cancel` | recipient (own request) |
+| GET | `/api/pickups/unassigned` | admin: approved requests with no volunteer yet |
+| POST | `/api/pickups/assign` | admin. Body: `claimRequestId`, `volunteerId` |
+| GET | `/api/pickups/mine` | volunteer: own runs, newest first |
+| PATCH | `/api/pickups/:id/status` | volunteer (own run). Body: `status` = `picked_up`, `delivered` or `cancelled` |
+| GET | `/api/users` | admin. Filters: `status`, `role` (comma lists). Volunteers include `activeRuns` |
+| PATCH | `/api/users/:id/verify` | admin. Body: `status` = `approved` or `rejected` |
+| GET | `/api/notifications` | approved user: own, newest first (50), with `unreadCount` |
+| PATCH | `/api/notifications/:id/read` | approved user (own) |
+| PATCH | `/api/notifications/read-all` | approved user |
+| GET | `/api/dashboard` | approved user: the role's figures and a 7-day series |
+| GET | `/api/activity` | approved user: recent events, limited to what the role may see |
 
 Claim rules enforced by the API:
 
@@ -219,9 +268,25 @@ Claim rules enforced by the API:
 - Asking for more than is left is refused when the request is sent, and again
   at approval.
 - A recipient cannot cancel once the volunteer has picked the food up.
-- Notifications are stored for "request submitted" (to the canteen) and
-  "approved" / "turned down" (to the recipient). They appear in the app in
-  Stage 4.
+
+Pickup and account rules enforced by the API:
+
+- Only approved requests can be assigned, only to an approved volunteer, only
+  before the pickup deadline, and only once (409) unless the earlier run was
+  handed back.
+- Allowed pickup changes only: assigned → picked_up → delivered; assigned or
+  picked_up → cancelled. Anything else is a 400. A volunteer can change only
+  their own runs, and a double tap changes a run once.
+- Food counts as delivered only when a pickup is `delivered`. After each
+  delivery, a listing whose portions are all given out (or whose pickup time
+  has passed) and whose approved requests are all delivered becomes
+  `completed`.
+- Admin accounts never appear in `/api/users` and cannot be approved or
+  rejected.
+- Notifications: request submitted (to the canteen), approved / turned down
+  (to the recipient), volunteer assigned (to the volunteer and the
+  recipient), delivered (to the recipient and the canteen), account approved
+  (to the new user).
 
 Listing rules enforced by the API:
 

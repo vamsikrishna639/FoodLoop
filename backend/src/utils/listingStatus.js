@@ -1,5 +1,7 @@
 // Small helpers that keep a listing's status in line with the business rules.
 const FoodListing = require('../models/FoodListing');
+const ClaimRequest = require('../models/ClaimRequest');
+const Pickup = require('../models/Pickup');
 
 // Rule 3: a listing whose pickup deadline has passed is expired.
 //
@@ -26,4 +28,24 @@ function openStatusFor(listing) {
   return listing.reservedQuantity >= listing.quantity ? 'fully_reserved' : 'available';
 }
 
-module.exports = { expireOverdueListings, openStatusFor };
+// A listing is "completed" when its food has all been handed out: nothing
+// more can be given (every portion is reserved, or pickup has closed) and
+// every approved request on it has been delivered. Called after each
+// delivery. Returns true when the listing was just completed.
+async function completeIfDone(listingId) {
+  const listing = await FoodListing.findById(listingId);
+  if (!listing || listing.status === 'completed') return false;
+
+  const nothingMoreToGive = listing.reservedQuantity >= listing.quantity || listing.pickupDeadline <= new Date();
+  if (!nothingMoreToGive) return false;
+
+  const approved = await ClaimRequest.find({ listingId, status: 'approved' }).distinct('_id');
+  if (approved.length === 0) return false;
+  const delivered = await Pickup.countDocuments({ claimRequestId: { $in: approved }, pickupStatus: 'delivered' });
+  if (delivered < approved.length) return false;
+
+  await FoodListing.updateOne({ _id: listingId, status: { $ne: 'completed' } }, { $set: { status: 'completed' } });
+  return true;
+}
+
+module.exports = { expireOverdueListings, openStatusFor, completeIfDone };

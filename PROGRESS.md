@@ -1,163 +1,197 @@
 # FoodLoop — Progress
 
-Updated on 2026-11-14 at the end of Stage 3.
+Updated on 2026-11-14 at the end of Stage 4.
 
 ## Current stage
 
-**Stage 3 — Claim workflow: complete and committed**
-("Stage 3: claim workflow, stamp drop, my requests"). Waiting for the user to
-say "continue" before starting Stage 4.
+**Stage 4 — Volunteers, notifications, dashboards: complete and committed**
+("Stage 4: volunteers, notifications, dashboards, approvals"). Waiting for
+the user to say "continue" before starting Stage 5.
 
-## Done in Stage 3
+## Done in Stage 4
+
+**Shape round** (`/impeccable shape`): one question, answered: the activity
+feed is **scoped per role** (admin everything; donor their own listings;
+recipient and volunteer only events involving them, plus newly posted food
+for recipients).
 
 **Backend**
-- `/api/claims`: create (recipient), `mine` (recipient), `incoming` (donor),
-  `:id/approve`, `:id/reject` (donor, own listing), `:id/cancel` (recipient,
-  own request). Routes and validation in `routes/claimRoutes.js`, logic in
-  `controllers/claimController.js`.
-- Atomic reservation: approval first flips the claim `pending → approved` with
-  the status in the filter (stops double approvals), then reserves with one
-  `findOneAndUpdate` using `$expr` (`reserved + requested <= quantity`, listing
-  still `available`, deadline in the future) and `$inc`. If the reservation
-  matches nothing, the claim is put back to `pending` and the reply says how
-  much is left.
-- `fully_reserved` when everything is reserved; cancelling an approved claim
-  `$inc`s the portions back and sets the listing `available` again.
-- `utils/transitions.js`: one table each for claim and pickup status changes;
-  anything else is a 400 with a plain message ("An approved request cannot be
-  turned down").
-- Rule 7: a second open request for the same listing is a 409. Asking for more
-  than is left is refused at creation with a `requestedQuantity` field error.
-- Expired listings: no new requests, no approvals (the expiry sweep runs
-  first).
-- Cancelling: allowed while the pickup is missing or `assigned` (that pickup is
-  cancelled too); refused after `picked_up` / `delivered`.
-- `utils/notify.js`; notifications written for `claim_submitted`,
-  `claim_approved`, `claim_rejected`.
-- `ClaimRequest` gained `cancelledAt` and sends `id` in JSON. Claim replies
-  populate the listing (with its donor) and the recipient, and add a `pickup`
-  summary (volunteer name and times).
-- Seed: a second pending request on the sandwiches (6 + 8 asked of 12) for the
-  over-allocation demo; the cancelled claim has a `cancelledAt`.
+- `/api/pickups`: `unassigned` (admin: approved requests with no live run),
+  `assign` (admin), `mine` (volunteer), `:id/status` (volunteer, own run).
+  Status changes use `assertPickupTransition` and flip with the current
+  status in the filter, so a double tap changes a run once. A volunteer can
+  hand back a run (`cancelled`); the request returns to the admin's list.
+- Listing completion: after each delivery, `completeIfDone` marks the listing
+  `completed` when nothing more can be given (all reserved, or pickup time
+  passed) and every approved request on it is delivered.
+- `/api/users` (admin): list with `status` / `role` filters, volunteers with
+  `activeRuns`; `:id/verify` approves or rejects (never an admin).
+- `/api/notifications`: list (50, newest first, with `unreadCount`),
+  `:id/read` (own only), `read-all`.
+- `/api/dashboard`: the role's figures and a 7-day series of delivered
+  portions. `/api/activity`: up to 25 recent events written as sentences
+  ("You requested ...", "Meera Nair delivered ..."). Both are worked out from
+  the dates already stored; nothing new is saved. Role scoping lives in one
+  function, `scopeFor`.
+- Notifications now cover every type in rule 8: volunteer assigned (to the
+  volunteer and the recipient), delivered (to the recipient and the canteen),
+  account approved.
+- `Pickup` gained `cancelledAt`; `Notification` sends `id`. `utils/amount.js`
+  is shared by every message.
+- Seed: two more delivered lunches in the past week (chart data, 112
+  portions over four deliveries), Farhan's approved 3 kg of dal with no
+  volunteer (the admin's to-do), posting times set to when the food was
+  prepared, notifications with realistic times and a mix of read and unread.
 
 **Frontend**
-- `ClaimRequest` / `ClaimPickup` models, `ClaimService`, `ClaimsProvider`
-  (reset on sign-out). `ListingsProvider` gained `replace` and `byId`;
-  `Fmt.ago` added.
-- Listing detail: quantity stepper, optional note ("Note for the canteen"),
-  "Request 3 kg" button with loading state; a server quantity error shows in
-  red under the stepper. With an open request it shows "You asked for ...",
-  the stamp, a one-line next step, "See my requests" and "Cancel request".
-- Donor Board: the **Requests** queue (`screens/donor/request_queue.dart`),
-  with "N WAITING" beside the heading, a slip per request (who, organisation,
-  how long ago, amount in mono, token number and portions left, note), and
-  Approve / Turn down. Approve is disabled with a turmeric explanation when
-  too little is left or pickup has closed. Turn down asks for confirmation.
-  Decided slips stay in place this visit; older ones are listed under
-  "Decided earlier" (up to four). On wide content (900px or more) the queue is
-  in the right column above the tally; otherwise it sits right under the board.
-- `StampDrop` widget: APPROVED lands from scale 1.9, invisible and turned an
-  extra -10°, to rest in 420ms on `stampCurve`, with the ink fully visible
-  after the first third and a light haptic at impact. Reduced motion shows the
-  final stamp at once. Used only on approval; a turned-down stamp just fades
-  in over 200ms.
-- My requests (`/requests`): Active / Past tags, one `ReceiptTimeline` per
-  request that prints only the steps the request can still reach, the stamp
-  for the furthest step reached (PENDING, APPROVED, ASSIGNED, PICKED UP,
-  DELIVERED, REJECTED, CANCELLED), a one-line next step, and Cancel where the
-  server allows it. One column under 620px of content, otherwise two
-  staggered columns. Empty states for both tags. Fade-up on first load only.
+- Models: `Pickup`, `AppNotification`, `ActivityEvent`, `DashboardStats`;
+  `AppUser` gained `createdAt` and `activeRuns`.
+- Services: pickups, notifications, admin (users), dashboard (dashboard and
+  activity). Providers: `PickupsProvider`, `NotificationsProvider`,
+  `ActivityProvider`, `DashboardProvider`, `AdminProvider`, all reset on
+  sign-out.
+- `LiveUpdates`: one 20-second poller for the bell badge and (only while the
+  desktop rail is on screen) the activity feed. An `AppLifecycleListener`
+  stops it when the tab or app is hidden and refreshes at once on return.
+- **Volunteer Pickups** (`screens/volunteer/pickups_screen.dart`): tabs
+  Assigned / On the way / Delivered, each run a pickup-slip receipt, one
+  large button ("I've collected it", then "Mark delivered"), a turmeric note
+  when the counter closes within an hour, "Can't do this run" with a
+  confirmation. A run moved on this visit stays in its tab with the new
+  stamp (plain 200ms fade). Wide screens show "Portions you carried" beside
+  the runs; phones print the tally under Delivered only.
+- **Alerts** (`screens/common/alerts_screen.dart`): grouped by day; unread
+  lines have a chilli dot, the word NEW and a bolder message; tapping marks
+  read (optimistic); "Mark all read" beside the heading. The bell shows the
+  unread count on the bottom bar, rail and sidebar.
+- **Admin Overview** (`screens/admin/overview_screen.dart`): an impact block
+  (96px "portions delivered" with one printed sentence beside it, not stat
+  tiles) and the 7-day chart (`widgets/deliveries_chart.dart`: leaf bars,
+  today in chilli, square tops, values printed on the bars, dotted grid, mono
+  labels, a screen-reader summary, no animation). Then **Needs a volunteer**
+  (slips with "Assign volunteer"; ASSIGNED stamp in place after assigning)
+  and a "Right now" receipt with a link to Approvals.
+- **Assign sheet** (`screens/admin/assign_sheet.dart`): a dialog on wider
+  screens, a bottom sheet on phones; volunteers listed least busy first with
+  "FREE" / "1 RUN ON"; "Assign Meera" button; server errors shown inside.
+- **Approvals** (`screens/admin/approvals_screen.dart`): Waiting / Decided
+  tags; a printed table when the content is 640px or wider, slips below
+  that; Approve, and Reject with confirmation; decided rows keep their stamp
+  in place this visit.
+- **Activity rail** (`widgets/activity_rail.dart`) replaces the placeholder;
+  new lines fade in and settle 6px (200ms), the first load does not animate.
+- Donor tally gained "Delivered, ever"; My requests shows "N portions
+  received so far". `ComingSoonScreen` is gone. `FadeIn` moved to
+  `widgets/fade_in.dart` and is shared.
 
-## Verified in Stage 3
+## Verified in Stage 4
 
-- API: 32 checks in a Node script against a second server on port 5050, all
-  passing. They cover: incoming order and population; wrong-role, pending and
-  no-token blocks; empty-body field errors; duplicate open request (409);
-  asking above available; re-request after rejection; approve 6 of 12 then 8
-  refused with the claim rolled back to pending; approve twice; reject an
-  approved claim; **two approvals fired in parallel on a 5-portion listing
-  (3 + 3): exactly one 200, reserved = 3**; fully_reserved; release on cancel;
-  other recipient / donor cannot cancel; cancel twice; pickup details in
-  `mine`; cancel with an assigned pickup cancels the pickup; cancel after
-  pick-up refused; approve and request on an expired listing; bad and unknown
-  ids; notifications written.
-- Playwright screenshots of the release build at 360, 768 and 1440 in paper
-  and chalkboard: Board with the queue, My requests. Detail with the request
-  form and with "You asked for" at 360 in both themes. My requests two-column
-  at 1440 (light) and 768 (dark).
-- Clicked Approve on the Board (1440): the slip got APPROVED, "6 left", the
-  slip message, and Farhan's 8-packet slip switched to the turmeric warning
-  with Approve disabled.
-- The stamp drop was recorded with a CDP screencast: the stamp appears large,
-  faint and steeply turned, then settles at its normal size and angle within
-  about 400ms.
+- API: 63 checks in a Node script against a second server on port 5050 with
+  its own database (`foodloop_stage4`), all passing after the last change.
+  They cover: dashboard figures for all four roles; pending and no-token
+  blocks; activity sorted newest first, recipient sees no other recipient,
+  volunteer sees only own runs; notifications list, unread count, mark read,
+  someone else's (404), bad id, read-all; users list, wrong role, bad
+  filter, admins never listed, volunteer loads, approve, approve twice,
+  verify an admin; unassigned list; assign by a donor (403), empty body
+  field errors, assign to a recipient, assign a pending request, assign,
+  assign twice (409), notifications to volunteer and recipient; runs carry
+  phone and token; other volunteer (403), assigned → delivered (400), bad
+  status, **two "picked up" taps in parallel: exactly one 200**; cancel after
+  pick-up refused; delivered; delivered → cancelled refused; partial listing
+  not completed; fully reserved and delivered → completed; donor told;
+  impact grows; hand back → back in the queue → reassigned; receipt shows the
+  new volunteer.
+- **Polling pause**, measured in the browser on the release build (admin at
+  1440): visible for 45s → 2 notification and 2 activity requests; tab hidden
+  for 45s → **0 and 0**; shown again → 1 and 1 within 2 seconds.
+- Clicked through in Playwright (semantics tree): admin assigns Meera from
+  the dialog → ASSIGNED stamp, slip, "NONE WAITING", the rail shows the new
+  line on its next load; Meera taps "I've collected it" then "Mark delivered"
+  at 360 → PICKED UP then DELIVERED stamps, tally 58 → 61; Farhan taps an
+  unread alert → badge 4 → 3.
+- Screenshots of the release build: Overview at 1440 / 768 dark / 360 light
+  and 360 dark (lower half), assign dialog, Approvals at 1440 light (table) /
+  1440 dark and 768 dark (slips before the fix; table width fixed after) /
+  360 light, Pickups at 1440 light / 360 dark / 360 light, Alerts at 768 /
+  1440 dark / 360 empty, My requests at 768, Board at 1440 (tally).
 - `flutter analyze`: no issues. `flutter build web` from `C:\FoodLoop\frontend`.
 
-From `/impeccable critique` (in the conversation, Flutter canvas so no
-detector):
-- P2: at 1440 the Board stacks the queue under the board rather than in the
-  right column the user chose (see assumptions).
-- P3 (left for Stage 5): counter cards do not show that the recipient has
-  already requested a token; only the detail page does.
+From the critique (`/impeccable critique`; the platform is `adaptive`, so it
+is a design review without the web detector):
+- P1, fixed: on a 360px phone the volunteer's button was below the fold.
+  The lede is hidden on phones and the tally line moved to the Delivered tab.
+- P2, fixed: Overview at 1440 stacked the impact block so tall that the
+  volunteer queue started below the fold; number and sentence now share a row.
+- P2, fixed: Approvals showed slips at 1440 because of the activity rail;
+  the table now fits the ~690px.
+- P3, fixed: the Alerts lede repeated the empty state; "Accounts waiting"
+  wrapped on phones (now "To approve").
+- P3, left for Stage 5: alerts are not links to the page they are about;
+  the disabled "Choose a volunteer" button is a pale chilli.
 
 ## Known issues / not verified
 
-- **The user's own API on port 5000 was started before Stage 3 with
-  `node src/server.js` (no reload), so it has no `/api/claims` routes.**
-  It must be restarted. It was not stopped from here.
-- Not tried by hand: the reduced-motion path of the stamp drop, the haptic on
-  a real phone, the cancel dialog clicked in the browser (cancel was verified
-  through the API), and typing a note in the form.
-- The concurrency test fires two simultaneous HTTP requests; it is not a
-  load test.
-- Still open from earlier stages: the Hero flight not seen frame by frame,
-  the date pickers not screenshotted, no Android run yet, no Flutter tests,
-  Google Fonts need internet on first load.
+- **The user's own API on port 5000 must be restarted** (`npm start` does
+  not reload): without a restart the new endpoints answer "Route not found"
+  and the app shows error states on the new pages.
+- **Run `npm run seed` once** for the Stage 4 demo data (it wipes the
+  `foodloop` database). The user's database was not touched from here; all
+  testing used `foodloop_stage4`.
+- Not tried by hand: the bottom-sheet version of the assign picker (only
+  the dialog was clicked), Reject on Approvals in the browser (verified
+  through the API), "Can't do this run" in the browser (verified through the
+  API), on a real Android device the lifecycle pause.
+- The polling test hides the tab by overriding `document.visibilityState`
+  and sending `visibilitychange`, which is what Flutter's engine listens to;
+  a real background tab was not tried in headless Chrome.
+- Still open from earlier stages: no Android run yet, no Flutter tests,
+  Google Fonts need internet on first load, the stamp drop's reduced-motion
+  path not tried by hand.
 
 ## Assumptions made
 
-- **Approval is two atomic steps with a manual undo**, because a single local
-  MongoDB (not a replica set) has no multi-document transactions.
-- **Requests above what is left are refused when they are sent**, as well as at
-  approval. The brief only requires the approval check; the early check gives
-  clearer feedback.
-- **Approve is disabled in the UI when it cannot succeed**; the server still
-  enforces the rule (shown by the API tests). The visible demo of the guard is
-  the disabled button with its reason.
-- **Cancel is allowed until the volunteer picks the food up** (user's choice);
-  an `assigned` pickup is cancelled with the request.
-- **Turning a request down asks for confirmation**, because it cannot be undone.
-  Approving does not, because the stamp moment should follow the tap directly.
-- **The donor is not notified when a recipient cancels**; rule 8 does not list
-  it.
-- **Notification messages are stored now; the Alerts screen is Stage 4.**
-- **Board layout at 1440:** the user chose "right column", but the sidebar and
-  the activity rail leave about 690px for the Board, and a right column there
-  would squeeze the chalkboard to phone width. The queue goes to the right
-  column at 900px of content (wider screens) and sits straight under the
-  board below that, where its first request is still above the fold.
-- **The receipt's footer is the canteen's name**; the pickup place is in the
-  next-step line under the receipt.
-- **The note is limited to 200 characters** and is optional.
-- **"Active"** means pending, or approved and not yet delivered; **"Past"**
-  means delivered, turned down or cancelled.
+- **Activity is scoped per role** (user's choice). Recipients also see
+  "posted" lines for new food, because the counter is public anyway.
+- **The activity feed and the badge poll every 20 seconds.** "Not in the
+  foreground" means the tab or app is hidden (`hidden` / `paused`); a visible
+  but unfocused window (`inactive`) keeps polling.
+- **On phones and tablets there is no activity rail**, so only the badge is
+  polled there (the brief puts the feed on desktop).
+- **Activity and dashboard figures are computed, not stored**, from dates
+  that already exist. No new collection.
+- **The chart shows portions delivered per day** (the deliveries count is in
+  the screen-reader summary and the sentence), because counts of 0 to 2
+  runs make a flat chart. Days use the server's local time.
+- **A volunteer can hand back an assigned run**; the transition table also
+  allows `picked_up → cancelled`, which the API accepts but the app does not
+  offer (food in hand should be delivered or reported to the admin).
+- **A handed-back run keeps the request approved** and its portions
+  reserved; it goes back to the admin's list. No one is notified (rule 8
+  does not list it); the admin sees it in the list and the activity feed.
+- **Listing completion** as described above; a listing with open portions
+  stays open after a delivery.
+- **Assigning is refused after the pickup deadline**; such a request shows a
+  turmeric note in the admin's list instead of a button.
+- **Rejected accounts are not notified** (rule 8 lists only approval); their
+  waiting screen already says the account was not approved.
+- **The admin gets no notifications** (none are listed for the admin in rule
+  8); their Alerts page shows the empty state.
+- **Only one admin assigns**, so "one live run per request" is a check
+  before create, not an atomic guard (unlike claim approval).
+- **Seed has ten listings**, two more than "about eight", to give the 7-day
+  chart something to show.
 
 ## Exact next step to resume
 
-Wait for "continue", then start **Stage 4 — Volunteers, notifications,
-dashboards** (`PROMPT.md` Part J):
+Wait for "continue", then start **Stage 5 — Testing and polish**
+(`PROMPT.md` Part J):
 
-1. `/impeccable shape` for the volunteer dashboard, Alerts, admin overview and
-   approvals.
-2. Backend: `POST /api/pickups/assign` (admin, approved claims only),
-   `GET /api/pickups/mine`, `PATCH /api/pickups/:id/status` using
-   `assertPickupTransition`; mark the listing `completed` when every reserved
-   portion is delivered; `volunteer_assigned` / `delivered` / `account_approved`
-   notifications; `/api/notifications` (list, read, read-all); `/api/users`
-   (pending list, verify); `/api/dashboard`; `/api/activity`.
-3. Frontend: volunteer home (tabs Assigned / On the way / Delivered), Alerts
-   with the bell badge, admin overview (ImpactNumber block, 7-day chart),
-   approvals (table on desktop, cards on phones), volunteer assignment dialog,
-   activity rail feed that stops polling when the tab is hidden. Replace the
-   remaining `ComingSoonScreen` stand-ins.
-4. Screenshots at 360, 768 and 1440 in both themes, then `/impeccable critique`.
+1. Postman collection (exported JSON) with negative tests: over-allocation,
+   wrong role, invalid claim and pickup transitions, double assign.
+2. Playwright screenshots at 360 / 768 / 1440 for every screen in both
+   themes; dark mode check.
+3. `/impeccable audit` + `/impeccable polish` across the app; review-animations
+   and fix its findings. Include the P3s above.
+4. README: setup, test logins, and a demo script for one full donor →
+   recipient → admin assigns → volunteer → delivered flow.

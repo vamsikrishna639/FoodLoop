@@ -24,6 +24,8 @@ class AppUser {
     required this.phone,
     required this.organization,
     required this.verificationStatus,
+    this.createdAt,
+    this.activeRuns = 0,
   });
 
   final String id;
@@ -33,6 +35,12 @@ class AppUser {
   final String phone;
   final String organization;
   final String verificationStatus; // pending | approved | rejected
+  final DateTime? createdAt; // when they registered (shown to the admin)
+
+  /// Volunteers only, in the admin's lists: runs they have on the go.
+  final int activeRuns;
+
+  bool get isPending => verificationStatus == 'pending';
 
   bool get isApproved => verificationStatus == 'approved';
   bool get isRejected => verificationStatus == 'rejected';
@@ -53,5 +61,7 @@ class AppUser {
         phone: (json['phone'] ?? '').toString(),
         organization: (json['organization'] ?? '').toString(),
         verificationStatus: (json['verificationStatus'] ?? 'pending').toString(),
+        createdAt: DateTime.tryParse((json['createdAt'] ?? '').toString())?.toLocal(),
+        activeRuns: (json['activeRuns'] as num?)?.toInt() ?? 0,
       );
 }

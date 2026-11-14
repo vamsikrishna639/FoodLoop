@@ -13,6 +13,7 @@ import '../../core/theme/tokens.dart';
 import '../../models/food_listing.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/claims_provider.dart';
+import '../../providers/dashboard_provider.dart';
 import '../../providers/listings_provider.dart';
 import '../../widgets/chalkboard.dart';
 import '../../widgets/deadline_clock.dart';
@@ -40,6 +41,7 @@ class _BoardScreenState extends State<BoardScreen> {
       if (!mounted) return;
       context.read<ListingsProvider>().load();
       context.read<ClaimsProvider>().load(incoming: true);
+      context.read<DashboardProvider>().load();
     });
   }
 
@@ -227,6 +229,8 @@ class _Tally extends StatelessWidget {
     final closingSoon = open.where((l) => l.isClosingSoon).length;
     final reserved = open.fold<int>(0, (sum, l) => sum + l.reservedQuantity);
     String? n(int v) => listings.items == null ? null : '$v';
+    // Rule 4: only portions a volunteer has handed over count as given.
+    final stats = context.watch<DashboardProvider>().stats;
 
     return ReceiptTimeline(
           title: 'Counter tally',
@@ -237,6 +241,7 @@ class _Tally extends StatelessWidget {
             ReceiptEntry('Reserved', n(reserved)),
             ReceiptEntry('Closing < 1h', n(closingSoon)),
             ReceiptEntry('Posted today', n(postedToday)),
+            ReceiptEntry('Delivered, ever', stats == null ? null : '${stats['portionsDelivered']}', emphasis: true),
           ],
           footer: 'All units added together',
         );

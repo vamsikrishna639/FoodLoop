@@ -41,7 +41,9 @@ async function seed() {
 
   // ---- Listings (created one by one so token numbers are in order) --------
   const base = { donorId: donor._id, location: 'Main Block Canteen, Counter 2' };
-  const L = (data) => FoodListing.create({ ...base, ...data });
+  // A listing is "posted" when its food was prepared, unless said otherwise,
+  // so the activity feed shows realistic times.
+  const L = (data) => FoodListing.create({ ...base, createdAt: data.preparedAt, ...data });
 
   // 1. Completed and delivered (two days ago)
   const pulao = await L({
@@ -54,6 +56,17 @@ async function seed() {
     title: 'Idli Sambar', description: 'Breakfast surplus. Sambar packed separately.',
     quantity: 40, unit: 'plates', reservedQuantity: 40, foodType: 'veg',
     allergenNotes: 'None declared.', preparedAt: days(-1), pickupDeadline: hours(-20), status: 'completed',
+  });
+  // History for the 7-day deliveries chart: two more delivered lunches.
+  const rajma = await L({
+    title: 'Rajma Chawal', description: 'Lunch surplus.',
+    quantity: 18, unit: 'plates', reservedQuantity: 18, foodType: 'veg',
+    allergenNotes: 'None declared.', preparedAt: days(-6), pickupDeadline: hours(-140), status: 'completed',
+  });
+  const poha = await L({
+    title: 'Poha and Chai', description: 'Breakfast surplus.',
+    quantity: 24, unit: 'packets', reservedQuantity: 24, foodType: 'veg',
+    allergenNotes: 'Contains peanuts.', preparedAt: days(-4), pickupDeadline: hours(-92), status: 'completed',
   });
   // 3. Available, plenty of time, partly reserved
   const biryani = await L({
@@ -88,7 +101,7 @@ async function seed() {
   // 8. Available, large quantity by weight
   const dal = await L({
     title: 'Dal Tadka and Jeera Rice', description: 'Bulk surplus in steel containers. Bring your own vessels.',
-    quantity: 8, unit: 'kg', reservedQuantity: 0, foodType: 'veg',
+    quantity: 8, unit: 'kg', reservedQuantity: 3, foodType: 'veg',
     allergenNotes: 'None declared.', preparedAt: mins(-40), pickupDeadline: hours(6), status: 'available',
   });
 
@@ -107,23 +120,35 @@ async function seed() {
   const cThali = await C(thali, farhan, 10, 'approved', { note: 'Evening study group.', decidedAt: mins(-50), createdAt: mins(-60) });
   await C(dal, farhan, 3, 'rejected', { note: 'Need it by noon.', decidedAt: mins(-20), createdAt: mins(-30) });
   await C(dal, ananya, 2, 'cancelled', { note: '', createdAt: mins(-35), cancelledAt: mins(-25) });
+  // Farhan asked again after being turned down; approved, and no volunteer
+  // yet, so it is waiting in the admin's "Needs a volunteer" list.
+  await C(dal, farhan, 3, 'approved', { note: 'Smaller amount this time.', decidedAt: mins(-8), createdAt: mins(-15) });
+  const cRajma = await C(rajma, ananya, 18, 'approved', { decidedAt: hours(-143), createdAt: hours(-143.5) });
+  const cPoha = await C(poha, farhan, 24, 'approved', { decidedAt: hours(-95), createdAt: hours(-95.5) });
 
   // ---- Pickups -------------------------------------------------------------
   await Pickup.create({ claimRequestId: cPulao._id, volunteerId: kiran._id, pickupStatus: 'delivered', assignedAt: hours(-47), pickedUpAt: hours(-46), deliveredAt: hours(-45) });
   await Pickup.create({ claimRequestId: cIdli._id, volunteerId: meera._id, pickupStatus: 'delivered', assignedAt: hours(-23), pickedUpAt: hours(-22), deliveredAt: hours(-21) });
+  await Pickup.create({ claimRequestId: cRajma._id, volunteerId: meera._id, pickupStatus: 'delivered', assignedAt: hours(-142), pickedUpAt: hours(-141.5), deliveredAt: hours(-141) });
+  await Pickup.create({ claimRequestId: cPoha._id, volunteerId: kiran._id, pickupStatus: 'delivered', assignedAt: hours(-94), pickedUpAt: hours(-93.5), deliveredAt: hours(-93) });
   await Pickup.create({ claimRequestId: cBiryani._id, volunteerId: kiran._id, pickupStatus: 'assigned', assignedAt: mins(-25) });
   await Pickup.create({ claimRequestId: cThali._id, volunteerId: meera._id, pickupStatus: 'picked_up', assignedAt: mins(-45), pickedUpAt: mins(-15) });
 
   // ---- Notifications ---------------------------------------------------------
   await Notification.insertMany([
-    { userId: donor._id, type: 'claim_submitted', message: 'Farhan Sheikh requested 5 boxes of Chicken Biryani.' },
-    { userId: donor._id, type: 'claim_submitted', message: 'Ananya Rao requested 6 packets of Veg Grilled Sandwiches.' },
-    { userId: donor._id, type: 'claim_submitted', message: 'Farhan Sheikh requested 8 packets of Veg Grilled Sandwiches.' },
-    { userId: ananya._id, type: 'claim_approved', message: 'Your request for 8 boxes of Chicken Biryani was approved.' },
-    { userId: ananya._id, type: 'volunteer_assigned', message: 'Kiran Kumar will collect your Chicken Biryani.' },
-    { userId: farhan._id, type: 'claim_rejected', message: 'Your request for Dal Tadka and Jeera Rice was not approved.' },
-    { userId: kiran._id, type: 'volunteer_assigned', message: 'New pickup: 8 boxes of Chicken Biryani for Ananya Rao.' },
-    { userId: farhan._id, type: 'delivered', message: 'Idli Sambar (40 plates) was delivered.', isRead: true },
+    { createdAt: mins(-38), userId: donor._id, type: 'claim_submitted', message: 'Farhan Sheikh requested 5 boxes of Chicken Biryani.' },
+    { createdAt: mins(-12), userId: donor._id, type: 'claim_submitted', message: 'Ananya Rao requested 6 packets of Veg Grilled Sandwiches.' },
+    { createdAt: mins(-6), userId: donor._id, type: 'claim_submitted', message: 'Farhan Sheikh requested 8 packets of Veg Grilled Sandwiches.' },
+    { createdAt: mins(-30), userId: ananya._id, type: 'claim_approved', message: 'Your request for 8 boxes of Chicken Biryani was approved.' },
+    { createdAt: mins(-25), userId: ananya._id, type: 'volunteer_assigned', message: 'Kiran Kumar will collect your Chicken Biryani.' },
+    { createdAt: mins(-20), userId: farhan._id, type: 'claim_rejected', message: 'Your request for Dal Tadka and Jeera Rice was not approved.' },
+    { createdAt: mins(-25), userId: kiran._id, type: 'volunteer_assigned', message: 'New pickup: 8 boxes of Chicken Biryani for Ananya Rao.' },
+    { createdAt: hours(-21), userId: farhan._id, type: 'delivered', message: 'Idli Sambar (40 plates) was delivered by Meera Nair.', isRead: true },
+    { createdAt: mins(-8), userId: farhan._id, type: 'claim_approved', message: 'Your request for 3 kg of Dal Tadka and Jeera Rice was approved.' },
+    { createdAt: mins(-45), userId: farhan._id, type: 'volunteer_assigned', message: 'Meera Nair will collect your Mixed Lunch Thali.', isRead: true },
+    { createdAt: mins(-45), userId: meera._id, type: 'volunteer_assigned', message: 'New pickup: 10 plates of Mixed Lunch Thali for Farhan Sheikh.', isRead: true },
+    { createdAt: days(-8), userId: ananya._id, type: 'account_approved', message: 'Your FoodLoop account was approved. Welcome in.', isRead: true },
+    { createdAt: hours(-21), userId: donor._id, type: 'delivered', message: 'Idli Sambar (40 plates) reached its recipient.', isRead: true },
   ]);
 
   console.log('\nSeed complete. All accounts use the password:', PASSWORD);

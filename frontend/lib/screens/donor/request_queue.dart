@@ -23,6 +23,7 @@ import '../../models/claim_request.dart';
 import '../../providers/claims_provider.dart';
 import '../../providers/listings_provider.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/fade_in.dart';
 import '../../widgets/fl_button.dart';
 import '../../widgets/skeleton_token.dart';
 import '../../widgets/slip_snackbar.dart';
@@ -206,7 +207,7 @@ class _RequestSlipState extends State<RequestSlip> {
                     // Only approval drops; a turned-down stamp just appears.
                     child: c.isApproved
                         ? StampDrop(play: drop, child: StatusStamp(c.stamp, scale: 1.25))
-                        : _FadeIn(child: StatusStamp(c.stamp, scale: 1.25)),
+                        : FadeIn(child: StatusStamp(c.stamp, scale: 1.25)),
                   ),
                 ],
               ],
@@ -363,23 +364,6 @@ class _EarlierLine extends StatelessWidget {
           StatusStamp(c.stamp, scale: 0.85),
         ],
       ),
-    );
-  }
-}
-
-/// A short fade for stamps that are not the approval moment.
-class _FadeIn extends StatelessWidget {
-  const _FadeIn({required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: FlMotion.of(context, FlMotion.base),
-      curve: FlMotion.easeOut,
-      builder: (context, t, child) => Opacity(opacity: t, child: child),
-      child: child,
     );
   }
 }

@@ -9,14 +9,24 @@ import 'core/api/api_client.dart';
 import 'core/api/token_store.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'providers/activity_provider.dart';
+import 'providers/admin_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/claims_provider.dart';
+import 'providers/dashboard_provider.dart';
 import 'providers/feed_provider.dart';
 import 'providers/listings_provider.dart';
+import 'providers/live_updates.dart';
+import 'providers/notifications_provider.dart';
+import 'providers/pickups_provider.dart';
 import 'providers/theme_provider.dart';
+import 'services/admin_service.dart';
 import 'services/auth_service.dart';
 import 'services/claim_service.dart';
+import 'services/dashboard_service.dart';
 import 'services/food_service.dart';
+import 'services/notification_service.dart';
+import 'services/pickup_service.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,14 +39,32 @@ void main() {
   final feed = FeedProvider(foods);
   final listings = ListingsProvider(foods);
   final claims = ClaimsProvider(ClaimService(api));
+  final dashboardService = DashboardService(api);
+  final pickupService = PickupService(api);
+  final notifications = NotificationsProvider(NotificationService(api));
+  final activity = ActivityProvider(dashboardService);
+  final dashboard = DashboardProvider(dashboardService);
+  final pickups = PickupsProvider(pickupService);
+  final admin = AdminProvider(pickupService, AdminService(api));
 
-  // On sign-out, forget the previous user's lists so the next user never
-  // sees them, even for a moment.
+  // Bell badge and activity feed, refreshed only while the app is in front.
+  final live = LiveUpdates(notifications: notifications, activity: activity);
+
   auth.addListener(() {
+    // Poll only for approved accounts (pending ones see the waiting screen).
+    live.setSignedIn(auth.status == AuthStatus.signedIn && (auth.user?.isApproved ?? false));
+
+    // On sign-out, forget the previous user's lists so the next user never
+    // sees them, even for a moment.
     if (auth.status == AuthStatus.signedOut) {
       feed.reset();
       listings.reset();
       claims.reset();
+      notifications.reset();
+      activity.reset();
+      dashboard.reset();
+      pickups.reset();
+      admin.reset();
     }
   });
 
@@ -52,6 +80,11 @@ void main() {
     feed: feed,
     listings: listings,
     claims: claims,
+    notifications: notifications,
+    activity: activity,
+    dashboard: dashboard,
+    pickups: pickups,
+    admin: admin,
   ));
 }
 
@@ -65,6 +98,11 @@ class FoodLoopApp extends StatefulWidget {
     required this.feed,
     required this.listings,
     required this.claims,
+    required this.notifications,
+    required this.activity,
+    required this.dashboard,
+    required this.pickups,
+    required this.admin,
   });
 
   final ApiClient api;
@@ -74,6 +112,11 @@ class FoodLoopApp extends StatefulWidget {
   final FeedProvider feed;
   final ListingsProvider listings;
   final ClaimsProvider claims;
+  final NotificationsProvider notifications;
+  final ActivityProvider activity;
+  final DashboardProvider dashboard;
+  final PickupsProvider pickups;
+  final AdminProvider admin;
 
   @override
   State<FoodLoopApp> createState() => _FoodLoopAppState();
@@ -94,6 +137,11 @@ class _FoodLoopAppState extends State<FoodLoopApp> {
         ChangeNotifierProvider<FeedProvider>.value(value: widget.feed),
         ChangeNotifierProvider<ListingsProvider>.value(value: widget.listings),
         ChangeNotifierProvider<ClaimsProvider>.value(value: widget.claims),
+        ChangeNotifierProvider<NotificationsProvider>.value(value: widget.notifications),
+        ChangeNotifierProvider<ActivityProvider>.value(value: widget.activity),
+        ChangeNotifierProvider<DashboardProvider>.value(value: widget.dashboard),
+        ChangeNotifierProvider<PickupsProvider>.value(value: widget.pickups),
+        ChangeNotifierProvider<AdminProvider>.value(value: widget.admin),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, theme, _) => MaterialApp.router(

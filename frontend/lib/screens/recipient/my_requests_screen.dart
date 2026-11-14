@@ -23,6 +23,7 @@ import '../../core/format.dart';
 import '../../core/theme/tokens.dart';
 import '../../models/claim_request.dart';
 import '../../providers/claims_provider.dart';
+import '../../providers/dashboard_provider.dart';
 import '../../providers/feed_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/fade_up.dart';
@@ -71,7 +72,9 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
     super.initState();
     // Always read again: the canteen may have decided since the last visit.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<ClaimsProvider>().load(incoming: false);
+      if (!mounted) return;
+      context.read<ClaimsProvider>().load(incoming: false);
+      context.read<DashboardProvider>().load();
     });
   }
 
@@ -94,6 +97,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
     final active = [for (final c in all ?? const <ClaimRequest>[]) if (c.isActive) c];
     final past = [for (final c in all ?? const <ClaimRequest>[]) if (!c.isActive) c];
     final shown = _showPast ? past : active;
+    final received = context.watch<DashboardProvider>().stats?['portionsReceived'];
 
     final animate = !_animated && all != null && shown.isNotEmpty;
     if (animate) WidgetsBinding.instance.addPostFrameCallback((_) => _animated = true);
@@ -177,6 +181,11 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
             ),
           ],
         ),
+        // Only delivered food counts (rule 4), so the figure is honest.
+        if (received != null && received > 0) ...[
+          const SizedBox(height: FlSpace.xs),
+          Text('$received PORTIONS RECEIVED SO FAR', style: context.fl.monoSmall),
+        ],
         const SizedBox(height: FlSpace.xl),
         body,
       ],

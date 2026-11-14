@@ -20,6 +20,7 @@ const { ok, ApiError, asyncHandler } = require('../utils/apiResponse');
 const { expireOverdueListings } = require('../utils/listingStatus');
 const { assertClaimTransition } = require('../utils/transitions');
 const { notify } = require('../utils/notify');
+const { amount } = require('../utils/amount');
 
 // What is joined into every claim we send back: the listing (with its
 // canteen's name, so the app can build a token from it) and the recipient.
@@ -28,19 +29,14 @@ const POPULATE = [
   { path: 'recipientId', select: 'name organization' },
 ];
 
-// "5 boxes" / "1 box": used in notification messages.
-const SINGULAR = { boxes: 'box', plates: 'plate', packets: 'packet', kg: 'kg' };
-function amount(n, unit) {
-  return n === 1 ? `1 ${SINGULAR[unit] || unit}` : `${n} ${unit}`;
-}
 
 function personName(user) {
   return user.name || 'A recipient';
 }
 
 // Adds the pickup (if any) to each claim, so the receipt can print
-// "Volunteer", "Picked up" and "Delivered". Pickups are created in Stage 4;
-// the seed already has some.
+// "Volunteer", "Picked up" and "Delivered". A cancelled pickup is ignored:
+// the request is then waiting for a new volunteer.
 async function withPickups(claims) {
   const ids = claims.map((c) => c._id);
   const pickups = await Pickup.find({ claimRequestId: { $in: ids }, pickupStatus: { $ne: 'cancelled' } })
@@ -277,7 +273,7 @@ exports.cancel = asyncHandler(async (req, res) => {
   if (!cancelled) throw new ApiError(400, 'This request changed a moment ago. Refresh and try again');
 
   if (pickup) {
-    await Pickup.updateOne({ _id: pickup._id, pickupStatus: 'assigned' }, { $set: { pickupStatus: 'cancelled' } });
+    await Pickup.updateOne({ _id: pickup._id, pickupStatus: 'assigned' }, { $set: { pickupStatus: 'cancelled', cancelledAt: new Date() } });
   }
 
   // Rule 2: give the portions back. $inc again, so it is atomic too.
@@ -290,3 +286,7 @@ exports.cancel = asyncHandler(async (req, res) => {
 
   await sendOne(res, claim._id, wasApproved ? 'Request cancelled. The portions are back on the counter' : 'Request cancelled');
 });
+
+// Shared with the pickup controller (the admin's "needs a volunteer" list).
+exports.POPULATE = POPULATE;
+exports.withPickups = withPickups;

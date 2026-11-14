@@ -10,10 +10,13 @@ import 'package:provider/provider.dart';
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/feed_provider.dart';
+import '../../providers/notifications_provider.dart';
+import '../../screens/admin/approvals_screen.dart';
+import '../../screens/admin/overview_screen.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/pending_screen.dart';
 import '../../screens/auth/register_screen.dart';
-import '../../screens/common/coming_soon_screen.dart';
+import '../../screens/common/alerts_screen.dart';
 import '../../screens/common/gallery_screen.dart';
 import '../../screens/common/profile_screen.dart';
 import '../../screens/common/splash_screen.dart';
@@ -24,7 +27,8 @@ import '../../screens/donor/manage_listings_screen.dart';
 import '../../screens/recipient/feed_screen.dart';
 import '../../screens/recipient/listing_detail.dart';
 import '../../screens/recipient/my_requests_screen.dart';
-import '../../widgets/empty_state.dart';
+import '../../screens/volunteer/pickups_screen.dart';
+import '../../widgets/activity_rail.dart';
 import '../../widgets/responsive_shell.dart';
 import '../theme/tokens.dart';
 
@@ -38,33 +42,41 @@ const Map<UserRole, Set<String>> _allowed = {
   UserRole.admin: {'/home', '/approvals', '/listings', '/notifications', '/profile'},
 };
 
-/// The navigation shown to each role.
-List<ShellDestination> destinationsFor(UserRole role) => switch (role) {
-      UserRole.recipient => const [
-          ShellDestination(label: 'Counter', icon: Icons.storefront_outlined, path: '/home'),
-          ShellDestination(label: 'Requests', icon: Icons.receipt_long_outlined, path: '/requests'),
-          ShellDestination(label: 'Alerts', icon: Icons.notifications_outlined, path: '/notifications'),
-          ShellDestination(label: 'Profile', icon: Icons.person_outline, path: '/profile'),
+/// The navigation shown to each role. [unread] is the number on the bell.
+List<ShellDestination> destinationsFor(UserRole role, {int unread = 0}) {
+  final alerts = ShellDestination(
+    label: 'Alerts',
+    icon: Icons.notifications_outlined,
+    path: '/notifications',
+    badge: unread,
+  );
+  return switch (role) {
+      UserRole.recipient => [
+          const ShellDestination(label: 'Counter', icon: Icons.storefront_outlined, path: '/home'),
+          const ShellDestination(label: 'Requests', icon: Icons.receipt_long_outlined, path: '/requests'),
+          alerts,
+          const ShellDestination(label: 'Profile', icon: Icons.person_outline, path: '/profile'),
         ],
-      UserRole.donor => const [
-          ShellDestination(label: 'Board', icon: Icons.dashboard_outlined, path: '/home'),
-          ShellDestination(label: 'Listings', icon: Icons.confirmation_number_outlined, path: '/listings'),
-          ShellDestination(label: 'Alerts', icon: Icons.notifications_outlined, path: '/notifications'),
-          ShellDestination(label: 'Profile', icon: Icons.person_outline, path: '/profile'),
+      UserRole.donor => [
+          const ShellDestination(label: 'Board', icon: Icons.dashboard_outlined, path: '/home'),
+          const ShellDestination(label: 'Listings', icon: Icons.confirmation_number_outlined, path: '/listings'),
+          alerts,
+          const ShellDestination(label: 'Profile', icon: Icons.person_outline, path: '/profile'),
         ],
-      UserRole.volunteer => const [
-          ShellDestination(label: 'Pickups', icon: Icons.pedal_bike_outlined, path: '/home'),
-          ShellDestination(label: 'Alerts', icon: Icons.notifications_outlined, path: '/notifications'),
-          ShellDestination(label: 'Profile', icon: Icons.person_outline, path: '/profile'),
+      UserRole.volunteer => [
+          const ShellDestination(label: 'Pickups', icon: Icons.pedal_bike_outlined, path: '/home'),
+          alerts,
+          const ShellDestination(label: 'Profile', icon: Icons.person_outline, path: '/profile'),
         ],
-      UserRole.admin => const [
-          ShellDestination(label: 'Overview', icon: Icons.insights_outlined, path: '/home'),
-          ShellDestination(label: 'Approvals', icon: Icons.how_to_reg_outlined, path: '/approvals'),
-          ShellDestination(label: 'Listings', icon: Icons.confirmation_number_outlined, path: '/listings'),
-          ShellDestination(label: 'Alerts', icon: Icons.notifications_outlined, path: '/notifications'),
-          ShellDestination(label: 'Profile', icon: Icons.person_outline, path: '/profile'),
+      UserRole.admin => [
+          const ShellDestination(label: 'Overview', icon: Icons.insights_outlined, path: '/home'),
+          const ShellDestination(label: 'Approvals', icon: Icons.how_to_reg_outlined, path: '/approvals'),
+          const ShellDestination(label: 'Listings', icon: Icons.confirmation_number_outlined, path: '/listings'),
+          alerts,
+          const ShellDestination(label: 'Profile', icon: Icons.person_outline, path: '/profile'),
         ],
     };
+}
 
 GoRouter buildRouter(AuthProvider auth) {
   return GoRouter(
@@ -124,13 +136,15 @@ GoRouter buildRouter(AuthProvider auth) {
         builder: (context, state, child) {
           final user = auth.user;
           if (user == null) return const SizedBox.shrink(); // mid sign-out
+          // Only the unread count rebuilds the shell, not every notification.
+          final unread = context.select<NotificationsProvider, int>((n) => n.unread);
           return ResponsiveShell(
             user: user,
-            destinations: destinationsFor(user.role),
+            destinations: destinationsFor(user.role, unread: unread),
             currentPath: state.matchedLocation,
             onNavigate: (path) => context.go(path),
             action: _actionFor(context, user.role),
-            activityRail: const ActivityRailPlaceholder(),
+            activityRail: const ActivityRail(),
             child: child,
           );
         },
@@ -156,30 +170,8 @@ GoRouter buildRouter(AuthProvider auth) {
               ManageListingsScreen(admin: auth.user?.role == UserRole.admin),
             ),
           ),
-          GoRoute(
-            path: '/approvals',
-            pageBuilder: (_, s) => _fade(
-              s,
-              const ComingSoonScreen(
-                title: 'Approvals',
-                heading: 'The queue opens soon',
-                message: 'New accounts waiting for a decision will appear here. Built in Stage 4.',
-                art: EmptyArt.clock,
-              ),
-            ),
-          ),
-          GoRoute(
-            path: '/notifications',
-            pageBuilder: (_, s) => _fade(
-              s,
-              const ComingSoonScreen(
-                title: 'Alerts',
-                heading: 'Nothing to tell you yet',
-                message: 'Approvals, pickups and deliveries will be announced here. Built in Stage 4.',
-                art: EmptyArt.slip,
-              ),
-            ),
-          ),
+          GoRoute(path: '/approvals', pageBuilder: (_, s) => _fade(s, const ApprovalsScreen())),
+          GoRoute(path: '/notifications', pageBuilder: (_, s) => _fade(s, const AlertsScreen())),
           GoRoute(path: '/profile', pageBuilder: (_, s) => _fade(s, const ProfileScreen())),
         ],
       ),
@@ -224,7 +216,7 @@ ShellAction? _actionFor(BuildContext context, UserRole role) => switch (role) {
       _ => null,
     };
 
-/// Home differs per role. Volunteer and admin homes arrive in Stage 4.
+/// Home differs per role.
 class _HomeForRole extends StatelessWidget {
   const _HomeForRole({required this.auth});
   final AuthProvider auth;
@@ -233,18 +225,8 @@ class _HomeForRole extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (auth.user?.role) {
       UserRole.donor => const BoardScreen(),
-      UserRole.volunteer => const ComingSoonScreen(
-          title: 'Pickups',
-          heading: 'No runs assigned',
-          message: 'Pickups an admin assigns to you will appear here. Built in Stage 4.',
-          art: EmptyArt.clock,
-        ),
-      UserRole.admin => const ComingSoonScreen(
-          title: 'Overview',
-          heading: 'Numbers come later',
-          message: 'Impact figures, the deliveries chart and approvals are built in Stage 4.',
-          art: EmptyArt.plate,
-        ),
+      UserRole.volunteer => const PickupsScreen(),
+      UserRole.admin => const OverviewScreen(),
       _ => const FeedScreen(),
     };
   }
