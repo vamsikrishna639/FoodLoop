@@ -1,6 +1,7 @@
 // Holds "who is logged in" for the whole app. The router listens to this,
 // so any change here (login, logout, approval) moves the user to the right screen.
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api/api_client.dart';
 import '../core/api/token_store.dart';
@@ -29,8 +30,23 @@ class AuthProvider extends ChangeNotifier {
   /// Set when the session ended on its own, so the login screen can say why.
   bool sessionExpired = false;
 
+  /// False until the first-run welcome slides have been seen on this device.
+  /// The router sends signed-out users to /welcome while it is false.
+  bool seenWelcome = false;
+  static const _welcomeKey = 'foodloop_seen_welcome';
+
+  Future<void> markWelcomeSeen() async {
+    seenWelcome = true;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_welcomeKey, true);
+  }
+
   /// Called once at start-up: reuse a saved token if it still works.
   Future<void> restore() async {
+    // Read the welcome flag first, so the router knows it before deciding.
+    final prefs = await SharedPreferences.getInstance();
+    seenWelcome = prefs.getBool(_welcomeKey) ?? false;
+
     final saved = await _store.read();
     if (saved == null) {
       status = AuthStatus.signedOut;
@@ -76,6 +92,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> _start(AuthSession session) async {
+    // Anyone who has signed in no longer needs the welcome slides.
+    if (!seenWelcome) await markWelcomeSeen();
     _api.token = session.token;
     await _store.write(session.token);
     user = session.user;

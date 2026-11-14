@@ -5,9 +5,11 @@
 // to the correct place without each screen having to check.
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:provider/provider.dart';
 
 import '../../models/user.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/feed_provider.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/pending_screen.dart';
 import '../../screens/auth/register_screen.dart';
@@ -15,12 +17,19 @@ import '../../screens/common/coming_soon_screen.dart';
 import '../../screens/common/gallery_screen.dart';
 import '../../screens/common/profile_screen.dart';
 import '../../screens/common/splash_screen.dart';
+import '../../screens/common/welcome_screen.dart';
+import '../../screens/donor/board_screen.dart';
+import '../../screens/donor/listing_form.dart';
+import '../../screens/donor/manage_listings_screen.dart';
+import '../../screens/recipient/feed_screen.dart';
+import '../../screens/recipient/listing_detail.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/responsive_shell.dart';
-import '../../widgets/slip_snackbar.dart';
 import '../theme/tokens.dart';
 
 /// Pages each role may open inside the shell. Anything else goes to /home.
+/// Sub-pages are allowed with their parent: '/home' also allows
+/// '/home/listing/42'.
 const Map<UserRole, Set<String>> _allowed = {
   UserRole.recipient: {'/home', '/requests', '/notifications', '/profile'},
   UserRole.donor: {'/home', '/listings', '/notifications', '/profile'},
@@ -75,7 +84,9 @@ GoRouter buildRouter(AuthProvider auth) {
           return Uri(path: '/splash', queryParameters: {'from': state.uri.toString()}).toString();
 
         case AuthStatus.signedOut:
-          return (path == '/login' || path == '/register') ? null : '/login';
+          // First visit on this device: show the welcome slides once.
+          if (!auth.seenWelcome) return path == '/welcome' ? null : '/welcome';
+          return const {'/login', '/register', '/welcome'}.contains(path) ? null : '/login';
 
         case AuthStatus.signedIn:
           final user = auth.user!;
@@ -90,14 +101,18 @@ GoRouter buildRouter(AuthProvider auth) {
             return '/home';
           }
           // Approved users have no business on the entry screens.
-          if (const {'/login', '/register', '/pending'}.contains(path)) return '/home';
+          if (const {'/login', '/register', '/pending', '/welcome'}.contains(path)) return '/home';
           // Role-based access: e.g. a recipient typing /approvals goes home.
-          if (!_allowed[user.role]!.contains(path)) return '/home';
+          final allowed = _allowed[user.role]!;
+          if (!allowed.any((p) => path == p || path.startsWith('$p/'))) return '/home';
+          // The listing detail page belongs to the recipient's counter.
+          if (path.startsWith('/home/listing/') && user.role != UserRole.recipient) return '/home';
           return null;
       }
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/welcome', pageBuilder: (_, s) => _fade(s, const WelcomeScreen())),
       GoRoute(path: '/login', pageBuilder: (_, s) => _fade(s, const LoginScreen())),
       GoRoute(path: '/register', pageBuilder: (_, s) => _fade(s, const RegisterScreen())),
       GoRoute(path: '/pending', pageBuilder: (_, s) => _fade(s, const PendingScreen())),
@@ -119,7 +134,18 @@ GoRouter buildRouter(AuthProvider auth) {
           );
         },
         routes: [
-          GoRoute(path: '/home', pageBuilder: (_, s) => _fade(s, _HomeForRole(auth: auth))),
+          GoRoute(
+            path: '/home',
+            pageBuilder: (_, s) => _fade(s, _HomeForRole(auth: auth)),
+            routes: [
+              // Phones open a token's details as its own page; the card
+              // flies into it (Hero). Wider screens use a side panel instead.
+              GoRoute(
+                path: 'listing/:id',
+                pageBuilder: (_, s) => _fade(s, ListingDetailScreen(id: s.pathParameters['id']!)),
+              ),
+            ],
+          ),
           GoRoute(
             path: '/requests',
             pageBuilder: (_, s) => _fade(
@@ -134,14 +160,10 @@ GoRouter buildRouter(AuthProvider auth) {
           ),
           GoRoute(
             path: '/listings',
+            // Donors manage their own tokens; the admin sees every listing.
             pageBuilder: (_, s) => _fade(
               s,
-              const ComingSoonScreen(
-                title: 'Listings',
-                heading: 'No tokens printed yet',
-                message: 'Posted food will be listed here as token slips. Built in Stage 2.',
-                art: EmptyArt.slip,
-              ),
+              ManageListingsScreen(admin: auth.user?.role == UserRole.admin),
             ),
           ),
           GoRoute(
@@ -197,17 +219,22 @@ ShellAction? _actionFor(BuildContext context, UserRole role) => switch (role) {
       UserRole.donor => ShellAction(
           label: 'Post food',
           icon: Icons.add,
-          onTap: () => showSlip(context, 'Posting food is built in Stage 2.', note: true),
+          onTap: () => showListingForm(context),
         ),
+      // Browse goes to the counter and puts the cursor in its search field
+      // (on phones this also opens the keyboard).
       UserRole.recipient => ShellAction(
           label: 'Browse',
           icon: Icons.search,
-          onTap: () => context.go('/home'),
+          onTap: () {
+            context.read<FeedProvider>().requestSearchFocus();
+            context.go('/home');
+          },
         ),
       _ => null,
     };
 
-/// Stage 1 home: a different stand-in per role. Replaced in Stages 2-4.
+/// Home differs per role. Volunteer and admin homes arrive in Stage 4.
 class _HomeForRole extends StatelessWidget {
   const _HomeForRole({required this.auth});
   final AuthProvider auth;
@@ -215,12 +242,7 @@ class _HomeForRole extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (auth.user?.role) {
-      UserRole.donor => const ComingSoonScreen(
-          title: "Today's Surplus",
-          heading: 'The board is blank',
-          message: 'Your chalkboard of posted food and incoming requests is built in Stage 2.',
-          art: EmptyArt.slip,
-        ),
+      UserRole.donor => const BoardScreen(),
       UserRole.volunteer => const ComingSoonScreen(
           title: 'Pickups',
           heading: 'No runs assigned',
@@ -233,11 +255,7 @@ class _HomeForRole extends StatelessWidget {
           message: 'Impact figures, the deliveries chart and approvals are built in Stage 4.',
           art: EmptyArt.plate,
         ),
-      _ => const ComingSoonScreen(
-          title: "Today's Counter",
-          heading: "The counter's clear",
-          message: 'Food on offer will be laid out here as token slips. Built in Stage 2.',
-        ),
+      _ => const FeedScreen(),
     };
   }
 }

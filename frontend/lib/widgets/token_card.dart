@@ -33,6 +33,7 @@ class TokenCard extends StatelessWidget {
     this.imageUrl,
     this.onTap,
     this.heroTag,
+    this.selected = false,
   });
 
   final String title;
@@ -47,6 +48,10 @@ class TokenCard extends StatelessWidget {
   final String? imageUrl;
   final VoidCallback? onTap;
   final Object? heroTag;
+
+  /// True for the token whose details are open in the side panel. It gets an
+  /// ink outline and stays lifted, so the link between list and panel is clear.
+  final bool selected;
 
   /// Height of the tear-off stub. It grows with the user's text size so the
   /// notches always sit exactly on the perforation line.
@@ -64,9 +69,9 @@ class TokenCard extends StatelessWidget {
           // would cut off an ordinary border.
           painter: TokenSlipPainter(
             stubHeight: stubHeight,
-            lineColor: hovered ? fl.controlBorder : fl.line,
+            lineColor: selected ? fl.ink : (hovered ? fl.controlBorder : fl.line),
             shadowColor: fl.ink.withValues(alpha: 0.10),
-            lifted: hovered,
+            lifted: hovered || selected,
           ),
           child: ClipPath(
             clipper: TokenSlipClipper(stubHeight),
@@ -88,6 +93,7 @@ class TokenCard extends StatelessWidget {
         ? slip(false)
         : Pressable(
             onTap: onTap,
+            selected: selected,
             semanticLabel: '$title from $donorName, token $tokenNumber',
             builder: (context, hovered) => slip(hovered),
           );

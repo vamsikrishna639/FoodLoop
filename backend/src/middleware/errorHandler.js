@@ -16,7 +16,7 @@ function errorHandler(err, req, res, next) {
   // Mongoose: badly formed ObjectId in the URL.
   if (err.name === 'CastError') {
     status = 400;
-    message = `Invalid ${err.path}`;
+    message = `Invalid ${err.path === '_id' ? 'id' : err.path}`;
   }
   // Mongoose: schema validation failed.
   if (err.name === 'ValidationError') {

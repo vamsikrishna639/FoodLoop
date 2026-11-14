@@ -17,18 +17,31 @@ the canteen's own area is a chalkboard. The full design system is in
 
 ## Build status
 
-The app is built in five stages. **Stage 1 is complete.**
+The app is built in five stages. **Stages 1 and 2 are complete.**
 
 | Stage | Contents | Status |
 |---|---|---|
 | 1 | Design system, component gallery, auth, role-based shell | Done |
-| 2 | Food listings: post, browse, detail | Not started |
+| 2 | Food listings: post, edit, delete, browse, detail; welcome slides | Done |
 | 3 | Claim workflow: request, approve, reject, cancel | Not started |
 | 4 | Volunteers, notifications, dashboards | Not started |
 | 5 | Testing and polish | Not started |
 
-After signing in today, each role sees its navigation and a stand-in page that
-names the stage where the real screen arrives.
+What works today:
+
+- **First visit:** three welcome slides on phones; on wide screens a split
+  page with the real "portions delivered" figure. Shown once per device.
+- **Recipient:** "Today's Counter" with search and filter tags, soonest
+  deadline first. Phones open a token's details as a page; tablets and
+  desktops show them in a side panel. The raised **Browse** button puts the
+  cursor in the search field. "Request food" is a stand-in until Stage 3.
+- **Donor:** the chalkboard "Today's Surplus" with a printed tally, the
+  **Post food** form (bottom sheet on phones, dialog on wider screens), and
+  **Listings** with Open / Closed tabs, Edit and Delete.
+- **Admin:** "All listings", with the same Edit and Delete.
+
+Pages for later stages (requests, alerts, approvals, volunteer and admin
+homes) still show a stand-in that names the stage where they arrive.
 
 ## What you need
 
@@ -127,28 +140,47 @@ backend/
     controllers/      request handlers
     routes/           routes and validation rules
     middleware/       auth (protect, requireApproved, requireRole), validate, errorHandler
-    utils/            response envelope and ApiError
+    utils/            response envelope, ApiError, listing expiry sweep
   seed/seed.js        demo data
 
 frontend/lib/
-  core/               theme tokens, router, API client, config, breakpoints
-  models/             data classes
-  services/           API calls
-  providers/          app state (auth, theme)
-  screens/            auth and common screens (role screens arrive in later stages)
+  core/               theme tokens, router, API client, config, breakpoints, date formats
+  models/             data classes (user, food listing)
+  services/           API calls (auth, food)
+  providers/          app state (auth, theme, recipient feed, donor listings)
+  screens/            auth, common (welcome, profile), recipient, donor
   widgets/            TokenCard, StatusStamp, ReceiptTimeline, ResponsiveShell and the rest
 ```
 
 ## API so far
 
-Every response has the shape `{ success, message, data }`.
+Every response has the shape `{ success, message, data }`. Validation
+failures also carry `data.errors`, a `{ field: message }` map.
 
 | Method | Endpoint | Access |
 |---|---|---|
 | GET | `/api/health` | public |
+| GET | `/api/impact` | public: portions delivered so far |
 | POST | `/api/auth/register` | public |
 | POST | `/api/auth/login` | public |
 | GET | `/api/auth/me` | signed in |
+| GET | `/api/foods` | approved user. Filters: `status` (comma list), `foodType`, `search`, `closingSoon=true` |
+| POST | `/api/foods` | donor |
+| GET | `/api/foods/mine` | donor |
+| GET | `/api/foods/:id` | approved user |
+| PATCH | `/api/foods/:id` | donor (own listing) or admin |
+| DELETE | `/api/foods/:id` | donor (own, no approved requests) or admin |
+
+Listing rules enforced by the API:
+
+- The prepared time cannot be in the future; the pickup deadline must be in
+  the future and after the prepared time.
+- An open listing whose deadline has passed becomes `expired`. This is checked
+  just before every listing read, so no background job is needed.
+- The quantity cannot be lowered below what is already reserved.
+- Expired and completed listings cannot be edited.
+- `status`, `reservedQuantity`, `tokenNumber` and `donorId` cannot be set by
+  the client; they are ignored if sent.
 
 ## Checks
 

@@ -23,8 +23,18 @@ const foodListingSchema = new mongoose.Schema(
       index: true,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    // Include virtuals (availableQuantity) and "id" when sent as JSON.
+    toJSON: { virtuals: true, versionKey: false },
+  }
 );
+
+// Available = quantity - reservedQuantity (business rule 1).
+// A virtual is computed on the fly, so it can never get out of sync.
+foodListingSchema.virtual('availableQuantity').get(function () {
+  return Math.max(0, this.quantity - this.reservedQuantity);
+});
 
 // Give every new listing the next token number.
 foodListingSchema.pre('save', async function () {

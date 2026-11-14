@@ -15,6 +15,10 @@ app.use(morgan('dev'));     // log each request in the terminal
 app.get('/api/health', (req, res) => ok(res, { time: new Date() }, 'FoodLoop API is running'));
 
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/foods', require('./routes/foodRoutes'));
+
+// Public: the one impact number shown on the welcome screen before login.
+app.get('/api/impact', require('./controllers/impactController').summary);
 
 app.use(notFound);
 app.use(errorHandler);

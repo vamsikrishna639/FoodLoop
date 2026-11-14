@@ -125,17 +125,22 @@ class LabeledField extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(label, style: context.text.titleSmall),
-              if (optional) ...[
-                const SizedBox(width: FlSpace.sm),
-                Text('optional', style: context.text.bodySmall),
+          // The visible label is skipped by screen readers; the same words
+          // are attached to the field itself below, so the field is
+          // announced as "Email" rather than only by its hint text.
+          ExcludeSemantics(
+            child: Row(
+              children: [
+                Text(label, style: context.text.titleSmall),
+                if (optional) ...[
+                  const SizedBox(width: FlSpace.sm),
+                  Text('optional', style: context.text.bodySmall),
+                ],
               ],
-            ],
+            ),
           ),
           const SizedBox(height: FlSpace.sm),
-          child,
+          Semantics(label: optional ? '$label, optional' : label, child: child),
         ],
       ),
     );
