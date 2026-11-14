@@ -155,7 +155,29 @@ Every seeded account uses the password `password123`.
 | Recipient, pending | `rohit@foodloop.test` | Sees only the "waiting for approval" screen |
 
 A newly registered account is always pending until an admin approves it.
-Admin accounts cannot be registered; they come only from the seed script.
+Admin accounts cannot be registered in the app; they come from the seed
+script or from `npm run create-admin` (below).
+
+### Creating your own admin
+
+The seeded `admin@foodloop.test` is for the demo. To add a real admin
+account, run this from `backend/` with your own details:
+
+```
+npm run create-admin -- "Full Name" you@college.edu "a-strong-password"
+```
+
+A phone number can follow as a fourth argument. The `--` is needed so npm
+passes the values on to the script. The script checks the same rules as the
+register form (name of 2+ characters, a valid email, a password of 6+
+characters), hashes the password with bcrypt, and creates the account as an
+**approved admin**, ready to sign in. It refuses an email that already exists
+and never changes an existing account. It writes to the database in
+`MONGO_URI` (from `.env`), so `npm run seed` would delete this admin too.
+
+Keep these details out of the repository: do not put them in a file that is
+committed. The command line, password included, may be saved in your
+terminal's history; clear that history afterwards on a shared computer.
 
 What the seed sets up for the claim workflow:
 
@@ -319,6 +341,7 @@ backend/
                       completion, allowed status changes (transitions.js),
                       notifications, quantity wording
   seed/seed.js        demo data
+  scripts/createAdmin.js   npm run create-admin: one approved admin account
   postman/            Postman collection with the API checks (npm run test:api)
 
 frontend/lib/

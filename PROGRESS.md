@@ -1,6 +1,6 @@
 # FoodLoop — Progress
 
-Updated on 2026-11-15 after the animation review that followed Stage 5.
+Updated on 2026-11-15 after adding `npm run create-admin`.
 
 ## Current stage
 
@@ -9,6 +9,27 @@ Updated on 2026-11-15 after the animation review that followed Stage 5.
 (committed as "Animation review: reduced motion, frequency, switcher
 anchoring"). All five stages of `PROMPT.md` Part J are built. Waiting for the
 user.
+
+## Admin creation script (after Stage 5)
+
+`npm run create-admin -- "Full Name" email password [phone]` in `backend/`
+(`scripts/createAdmin.js`). It checks the register form's rules, hashes the
+password with bcrypt (cost 10, as everywhere else), and creates an `approved`
+admin with organisation "Campus Admin". It refuses an existing email (never
+overwrites) and never prints the password. Phone is optional; without it the
+account shows "Not given", because the User model requires a phone.
+
+Verified against the test database `foodloop_stage5` with throwaway values:
+missing arguments and bad input exit 1 with the reasons; a valid run creates
+the account (role admin, approved, a 60-character `$2b$` hash, no plain
+password anywhere in the record); bcrypt accepts the right password and
+rejects a wrong one; the same email in other capitals is refused. The test
+account was deleted afterwards. No real admin details were used, and none are
+in the repository.
+
+Assumptions: the phone is an optional fourth argument (the request named
+three); the script does not change or promote existing accounts; a re-seed
+deletes script-made admins along with everything else.
 
 ## Animation review (after Stage 5)
 

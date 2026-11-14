@@ -24,6 +24,7 @@ npm start        # API on http://localhost:5000
 npm run dev      # same, restarts on file changes (node --watch)
 npm run seed     # WIPES the foodloop database, then inserts demo data
 npm run test:api # runs postman/FoodLoop.postman_collection.json with newman (needs the API on :5000)
+npm run create-admin -- "Full Name" email password [phone]   # one approved admin, bcrypt-hashed
 ```
 
 Frontend (from `frontend/`):
@@ -67,7 +68,7 @@ Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `
 - `src/middleware/errorHandler.js` is the only place that formats errors. It also maps Mongoose cast, validation and duplicate-key errors.
 - Request validation is `express-validator` rules in the route file followed by the `validate` middleware, which returns `data.errors` as a `{ field: message }` map. The Flutter forms show these under the matching inputs.
 - Auth chain for protected routes: `protect` (JWT → `req.user`), then `requireApproved` (blocks pending/rejected accounts), then `requireRole(...)`. `/auth/me` uses only `protect` so pending users can read their status.
-- New accounts are always `pending`. `admin` is not an accepted registration role; admins come only from the seed.
+- New accounts are always `pending`. `admin` is not an accepted registration role; admins come only from the seed or from `scripts/createAdmin.js` (`npm run create-admin`), which applies the register form's rules, hashes with bcrypt, creates an `approved` admin and refuses an existing email. Never commit real admin details (no defaults in the script, nothing in tracked files); test it against a separate database with throwaway values and delete the account afterwards.
 - `FoodListing` gets its `tokenNumber` (`FL-0042`) in a `pre('save')` hook from the atomic `Counter` model, so create listings with `create`/`save`, not `insertMany`.
 - Business rules in `PROMPT.md` Part F are enforced on the backend. The key one: claim approval must reserve quantity with a single conditional `findOneAndUpdate` (`$expr` + `$inc`) so concurrent approvals cannot over-allocate.
 - Claim approval (`controllers/claimController.js`) has two atomic steps: (1) flip the claim `pending → approved` with the status in the filter, so a double click matches only once; (2) reserve with `findOneAndUpdate` + `$expr` + `$inc`. If step 2 matches nothing, step 1 is undone by hand (back to `pending`). A single local MongoDB has no multi-document transactions, so keep this compensate-on-failure pattern and do not "simplify" it into one read-then-write.
