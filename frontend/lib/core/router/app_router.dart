@@ -179,7 +179,8 @@ GoRouter buildRouter(AuthProvider auth) {
   );
 }
 
-/// A short cross-fade between pages. Under reduced motion it is instant.
+/// A short cross-fade between pages: 200ms in, 120ms back. It only changes
+/// opacity, so it stays under reduced motion (the Hero, which moves, does not).
 CustomTransitionPage<void> _fade(GoRouterState state, Widget child) {
   return CustomTransitionPage<void>(
     key: state.pageKey,
@@ -187,7 +188,6 @@ CustomTransitionPage<void> _fade(GoRouterState state, Widget child) {
     transitionDuration: FlMotion.base,
     reverseTransitionDuration: FlMotion.fast,
     transitionsBuilder: (context, animation, _, child) {
-      if (FlMotion.reduced(context)) return child;
       return FadeTransition(
         opacity: CurvedAnimation(parent: animation, curve: FlMotion.easeOut),
         child: child,

@@ -102,7 +102,13 @@ class TokenCard extends StatelessWidget {
     // simply appears (both ends are TokenCards, so neither has a Hero).
     if (heroTag != null && !FlMotion.reduced(context)) {
       // Material keeps text styles intact while the card flies between screens.
-      card = Hero(tag: heroTag!, child: Material(type: MaterialType.transparency, child: card));
+      // The card moves between two places on screen, so it uses the app's
+      // movement curve (ease-in-out) instead of Material's default.
+      card = Hero(
+        tag: heroTag!,
+        curve: FlMotion.easeInOut,
+        child: Material(type: MaterialType.transparency, child: card),
+      );
     }
     return card;
   }

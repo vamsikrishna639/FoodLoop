@@ -168,14 +168,15 @@ class _FeedScreenState extends State<FeedScreen> {
                         ),
                         const SizedBox(width: FlSpace.xl),
                         // The side panel. A short cross-fade marks the change
-                        // of token without moving anything around.
+                        // of token without moving anything around. It is
+                        // 120ms: tokens are switched often, and a longer fade
+                        // shows two panels of text on top of each other.
                         Expanded(
                           child: AnimatedSwitcher(
-                            duration: FlMotion.of(context, FlMotion.base),
+                            duration: FlMotion.fade(context, FlMotion.fast),
                             switchInCurve: FlMotion.easeOut,
                             switchOutCurve: FlMotion.easeOut,
-                            layoutBuilder: (current, previous) =>
-                                Stack(alignment: Alignment.topLeft, children: [...previous, ?current]),
+                            layoutBuilder: FlMotion.topLeft,
                             child: SingleChildScrollView(
                               key: ValueKey(selected.id),
                               padding: const EdgeInsets.only(bottom: FlSpace.xxxl, top: FlSpace.xs),

@@ -190,7 +190,7 @@ class _AlertLine extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 4),
                   child: AnimatedOpacity(
                     opacity: unread ? 1 : 0,
-                    duration: FlMotion.of(context, FlMotion.fast),
+                    duration: FlMotion.fade(context, FlMotion.fast),
                     curve: FlMotion.easeOut,
                     child: Container(
                       width: 8,

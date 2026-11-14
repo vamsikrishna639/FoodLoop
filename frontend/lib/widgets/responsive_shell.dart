@@ -263,8 +263,9 @@ class _SideItem extends StatelessWidget {
             : destination.label,
         focusRadius: FlRadius.control,
         onBoard: true,
+        // Only the fill colour changes, so it is treated as a fade.
         builder: (context, hovered) => AnimatedContainer(
-          duration: FlMotion.of(context, FlMotion.fast),
+          duration: FlMotion.fade(context, FlMotion.fast),
           constraints: const BoxConstraints(minHeight: 48),
           padding: EdgeInsets.symmetric(horizontal: compact ? FlSpace.xs : FlSpace.md, vertical: FlSpace.sm),
           decoration: BoxDecoration(
@@ -420,9 +421,9 @@ class _BottomItem extends StatelessWidget {
             ),
             const SizedBox(height: 3),
             // A short ink dash marks the current tab (shape, not only colour).
-            AnimatedContainer(
-              duration: FlMotion.of(context, FlMotion.base),
-              curve: FlMotion.easeOut,
+            // It is not animated: tabs are tapped many times a day, and the
+            // page's own cross-fade already confirms the change.
+            Container(
               height: 3,
               width: selected ? 20 : 0,
               decoration: BoxDecoration(color: fl.ink, borderRadius: BorderRadius.circular(2)),

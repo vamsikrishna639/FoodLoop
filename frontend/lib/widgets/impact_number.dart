@@ -1,7 +1,10 @@
 // A very large editorial number with a small mono caption, e.g.
 //   1,240
 //   MEALS SAVED
-// It counts up once, the first time it appears.
+// It counts up from 0 the first time a figure appears in a session. After
+// that it starts from the value it last showed, so coming back to the page
+// shows the number standing still, and a figure that grew (112 -> 116)
+// counts only the difference, which is the change worth seeing.
 import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 
@@ -28,6 +31,13 @@ class ImpactNumber extends StatelessWidget {
   // Indian digit grouping: 1,24,000.
   static final NumberFormat _format = NumberFormat.decimalPattern('en_IN');
 
+  /// The value each figure (by caption) last counted to in this session.
+  /// Kept in memory only; a page reload counts from 0 again.
+  static final Map<String, num> _shown = {};
+
+  /// Called on sign-out, so the next user's figures count up from 0.
+  static void forget() => _shown.clear();
+
   @override
   Widget build(BuildContext context) {
     final fl = context.fl;
@@ -40,10 +50,11 @@ class ImpactNumber extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // TweenAnimationBuilder runs from 0 to the value when first built,
-            // and only animates again if the value itself changes.
+            // TweenAnimationBuilder runs from `begin` to the value when first
+            // built, and only animates again if the value itself changes.
             TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: value.toDouble()),
+              tween: Tween(begin: (_shown[caption] ?? 0).toDouble(), end: value.toDouble()),
+              onEnd: () => _shown[caption] = value,
               duration: FlMotion.of(context, FlMotion.count),
               curve: FlMotion.easeOut,
               builder: (context, v, _) => FittedBox(

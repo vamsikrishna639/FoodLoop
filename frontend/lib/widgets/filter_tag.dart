@@ -31,7 +31,7 @@ class FilterTag extends StatelessWidget {
         child: Center(
           widthFactor: 1,
           child: AnimatedContainer(
-            duration: FlMotion.of(context, FlMotion.fast),
+            duration: FlMotion.fade(context, FlMotion.fast), // colours only
             curve: FlMotion.easeOut,
             // A minimum, not a fixed height, so large text sizes still fit.
             constraints: const BoxConstraints(minHeight: 38),

@@ -62,7 +62,9 @@ class _PressableState extends State<Pressable> {
           onTapCancel: enabled ? () => setState(() => _pressed = false) : null,
           onTap: widget.onTap,
           child: AnimatedScale(
-            scale: _pressed ? 0.98 : 1,
+            // With reduced motion there is no press scale at all (a zero
+            // duration would still make it jump to 0.98).
+            scale: _pressed && !FlMotion.reduced(context) ? 0.98 : 1,
             duration: FlMotion.of(context, FlMotion.fast),
             curve: FlMotion.easeOut,
             child: DecoratedBox(

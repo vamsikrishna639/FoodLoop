@@ -27,6 +27,7 @@ import 'services/dashboard_service.dart';
 import 'services/food_service.dart';
 import 'services/notification_service.dart';
 import 'services/pickup_service.dart';
+import 'widgets/impact_number.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,6 +66,7 @@ void main() {
       dashboard.reset();
       pickups.reset();
       admin.reset();
+      ImpactNumber.forget(); // the next user's figures count up afresh
     }
   });
 

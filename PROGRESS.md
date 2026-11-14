@@ -1,16 +1,63 @@
 # FoodLoop — Progress
 
-Updated on 2026-11-14 at the end of Stage 5.
+Updated on 2026-11-15 after the animation review that followed Stage 5.
 
 ## Current stage
 
-**Stage 5 — Testing and polish: complete and committed**
-("Stage 5: Postman tests, screenshots, audit and polish, demo script").
-All five stages of `PROMPT.md` Part J are built. Waiting for the user.
+**Stage 5 — Testing and polish: complete and committed**, including the
+`/review-animations` pass, which the user started after the Stage 5 commit
+(committed as "Animation review: reduced motion, frequency, switcher
+anchoring"). All five stages of `PROMPT.md` Part J are built. Waiting for the
+user.
 
-One Stage 5 item could not be done from here: **`review-animations`**. The
-skill is set to run only when the user starts it, so it refused to load from
-inside the session. Run `/review-animations` to do it.
+## Animation review (after Stage 5)
+
+Every animation in the app was checked against the review-animations
+standards (Emil Kowalski's). Kept as they were: the page cross-fade (200ms in,
+120ms back), the first-load list stagger (40ms steps, 8px rise, 200ms), the
+activity rail's new-line fade, the press scale (0.98, 120ms), filter tag and
+sidebar colour fades, the skeleton pulse (a loading signal, still under
+reduced motion), the button's printing dots, and the stamp drop (420ms, over
+the 300ms rule on purpose: it is the one rare, signature moment).
+
+Fixed:
+- **Reduced motion removed fades as well as movement.** The standard (and
+  DESIGN.md) says gentler, not none. New `FlMotion.fade` keeps opacity and
+  colour changes (capped at 120ms); `FlMotion.of` is now only for things
+  that move or scale. Under reduced motion: the page cross-fade stays (it was
+  cut), list items fade in together without rising (they appeared at once),
+  the APPROVED stamp fades in at rest over 120ms (it popped in), the
+  decision-line and run-button cross-fades stay.
+- **The press scale jumped under reduced motion** (a zero duration still
+  snapped to 0.98). Now there is no press scale at all then.
+- **Cross-fades jumped sideways at the end.** `AnimatedSwitcher` centres the
+  old and new child by default, so on approval the narrower "6 packets
+  reserved ..." line appeared centred and jumped left when the buttons left;
+  the volunteer's button-to-closing-line swap and the stamp swap did the same.
+  New `FlMotion.topLeft` / `topRight` layout builders anchor them.
+- **The bottom-bar tab dash animated its width on every tab tap** (a layout
+  property on a many-times-a-day action). It now changes instantly.
+- **The assign picker's rows animated a border width** (1px to 2px, which
+  pushed the text while it ran). Selection now answers instantly, and the
+  padding gives back the extra pixel so nothing shifts.
+- **The impact number counted up for 900ms every time the page opened** (the
+  admin's home page, many times a day). It now counts up once per figure per
+  session, then starts from the value it last showed: still on a return
+  visit, counting only the difference when a delivery added to it.
+  `ImpactNumber.forget()` on sign-out.
+- **The recipient's side panel cross-faded for 200ms** when switching tokens,
+  long enough to show two panels of text on top of each other; now 120ms.
+- **The Hero used Material's curve** (fastOutSlowIn); it now uses the app's
+  movement curve, `FlMotion.easeInOut`.
+- **Bottom sheets slid up under reduced motion**; they now just appear.
+- DESIGN.md's reduced-motion and ImpactNumber lines updated to match.
+
+Verified: `flutter analyze` clean; in the browser at 1440 the approval ends
+with the decision line on the left (no jump) and the stamp landed, with and
+without reduced motion (`emulateMedia({ reducedMotion: 'reduce' })`, which
+Flutter web reads). Not verified frame by frame: here a screenshot takes
+seconds and the CDP screencast sent no frames on the second try, so the
+in-between frames of the fades and the count-up were not seen.
 
 ## Done in Stage 5
 
@@ -206,7 +253,7 @@ is a design review without the web detector):
 
 ## Known issues / not verified
 
-- **`review-animations` has not run** (user-only skill, see above).
+- Animation in-between frames not inspected (see the animation review).
 - **Restart the API on port 5000 and run `npm run seed`** before the demo:
   the user's database was not touched from here.
 - **`frontend/build/web` was last built for port 5050** during testing and is
@@ -251,8 +298,6 @@ Earlier stages (unchanged):
 
 ## Exact next step to resume
 
-Nothing is left in `PROMPT.md` Part J except `review-animations`. Next:
-1. The user runs `/review-animations`; fix what it finds, retake the affected
-   screenshots, update the docs, commit and push.
-2. Before the viva: `npm run seed`, restart the API, follow the README demo
-   script once.
+Nothing is left in `PROMPT.md` Part J. Before the viva: `npm run seed`,
+restart the API, follow the README demo script once, and try the approval
+once with the system's reduce-motion setting on to see the gentler path.

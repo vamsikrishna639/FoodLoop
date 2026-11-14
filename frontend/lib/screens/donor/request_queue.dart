@@ -233,9 +233,13 @@ class _RequestSlipState extends State<RequestSlip> {
               Text('"${c.note}"', style: context.text.bodyMedium),
             ],
             const SizedBox(height: FlSpace.md),
+            // The buttons fade into the decision line in place. Anchored
+            // top-left so the shorter line does not start centred and jump.
             AnimatedSwitcher(
-              duration: FlMotion.of(context, FlMotion.fast),
+              duration: FlMotion.fade(context, FlMotion.fast),
               switchInCurve: FlMotion.easeOut,
+              switchOutCurve: FlMotion.easeOut,
+              layoutBuilder: FlMotion.topLeft,
               child: c.isPending
                   ? _Actions(
                       key: const ValueKey('actions'),

@@ -13,7 +13,7 @@ Read these before working:
 - `DESIGN.md` — the "Canteen Token" design system. It is a fixed brief, and it is implemented in `frontend/lib/core/theme/`.
 - `PRODUCT.md` — product context used by the `impeccable` skill.
 
-**Current stage:** All five stages are done (design system and auth; food listings; claim workflow; volunteers, notifications, dashboards and approvals; testing and polish). Still open from Stage 5: the `review-animations` skill can only be started by the user (`/review-animations`), so it has not run yet.
+**Current stage:** All five stages are done (design system and auth; food listings; claim workflow; volunteers, notifications, dashboards and approvals; testing and polish). The `/review-animations` pass (user-started) ran after Stage 5 and its fixes are in.
 
 ## Commands
 
@@ -106,7 +106,10 @@ Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `
 - Status is always a `StatusStamp` with a word, never colour alone.
 - `TokenCard` must look complete with an empty `imageUrl`; the printed ticket block is the default.
 - Do not put a small label or kicker above a heading; captions go beside or below.
-- Motion: 120–280ms with `FlMotion.easeOut`, wrapped in `FlMotion.of(context, ...)` or guarded by `FlMotion.reduced(context)` so reduced motion is respected. The stamp-drop animation (`widgets/stamp_drop.dart`) is reserved for claim approval only. It plays on the one slip whose id is `ClaimsProvider.justApproved`, which is cleared after the first frame so the drop never replays. Other stamps appear with a plain short fade.
+- Motion: 120–280ms with `FlMotion.easeOut`. Reduced motion means gentler, not none: wrap anything that moves or scales in `FlMotion.of(context, ...)` (zero when reduced) or guard it with `FlMotion.reduced(context)`; give pure opacity or colour changes `FlMotion.fade(context, ...)`, which keeps them (capped at 120ms). An `AnimatedSwitcher` whose children differ in size uses `layoutBuilder: FlMotion.topLeft` (or `topRight` for stamps); Flutter's default centres them, so the new child starts in the middle and jumps when the old one leaves.
+- Do not animate things tapped many times a day (the bottom-bar tab dash, radio choices in the assign picker) and never animate a width, padding or border width; the page cross-fade is enough feedback. The one kept exception is the welcome slides' step dots (three small bars, first visit only).
+- `ImpactNumber` counts up from 0 once per figure (keyed by caption) per session, then starts from the last value it showed; `ImpactNumber.forget()` runs on sign-out. The TokenCard `Hero` flies on `FlMotion.easeInOut` (movement), and bottom sheets pass `sheetAnimationStyle: AnimationStyle.noAnimation` under reduced motion.
+- The stamp-drop animation (`widgets/stamp_drop.dart`, 420ms, the one motion allowed over 300ms) is reserved for claim approval only; under reduced motion it is a 120ms fade at rest. It plays on the one slip whose id is `ClaimsProvider.justApproved`, which is cleared after the first frame so the drop never replays. Other stamps appear with a plain short fade.
 - On the donor Board, slips decided during this visit stay in the queue where they were (`ClaimsProvider.decidedHere`), so the stamp lands where the donor is looking. They move to "Decided earlier" on the next load.
 - The Board puts the queue in a right column only when its content is at least 900px wide. At 1440 the sidebar and activity rail leave about 690px, so the queue stacks under the chalkboard there.
 - Layouts are left-aligned and differ per role. The banned patterns are listed in `PROMPT.md` Part A.

@@ -5,7 +5,7 @@
 //   end:   scale 1, fully inked, at the stamp's own -6 degrees
 //
 // It is used ONLY for claim approval, so it stays special. With reduced
-// motion the stamp simply appears in its final place.
+// motion the stamp does not fall or turn: it fades in at rest (120ms).
 import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
@@ -31,6 +31,7 @@ class _StampDropState extends State<StampDrop> with SingleTickerProviderStateMix
   late final AnimationController _c = AnimationController(vsync: this, duration: FlMotion.stampDrop, value: 1);
   bool _started = false;
   bool _buzzed = false;
+  bool _still = false; // reduced motion: fade only, no scale or turn
 
   // The ink is already fully visible a third of the way in, so the eye sees
   // the stamp while it lands, not a ghost that fades in at the end.
@@ -71,9 +72,13 @@ class _StampDropState extends State<StampDrop> with SingleTickerProviderStateMix
 
   void _drop() {
     _started = true;
-    if (FlMotion.reduced(context)) {
-      _c.value = 1; // final state straight away
+    _still = FlMotion.reduced(context);
+    if (_still) {
+      // Gentler, not nothing: a short fade at rest, and the tap at once.
       HapticFeedback.lightImpact();
+      _buzzed = true;
+      _c.value = 0;
+      _c.animateTo(1, duration: FlMotion.fast);
       return;
     }
     _buzzed = false;
@@ -92,6 +97,7 @@ class _StampDropState extends State<StampDrop> with SingleTickerProviderStateMix
       animation: _c,
       child: widget.child,
       builder: (context, child) {
+        if (_still) return Opacity(opacity: _c.value, child: child);
         final t = _land.value;
         final scale = 1.9 + (1 - 1.9) * t; // 1.9 -> 1
         final turn = -10 * (1 - t) * math.pi / 180; // extra -10deg -> 0

@@ -51,9 +51,26 @@ abstract final class FlMotion {
   static bool reduced(BuildContext context) =>
       MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
-  /// Returns [d], or zero when reduced motion is on.
+  /// Returns [d], or zero when reduced motion is on. Use it for anything
+  /// that MOVES or SCALES.
   static Duration of(BuildContext context, Duration d) =>
       reduced(context) ? Duration.zero : d;
+
+  /// For pure opacity fades. Reduced motion means gentler, not none: a fade
+  /// does not move anything, and it still tells the eye that something
+  /// changed, so it keeps running (never longer than [fast] when reduced).
+  static Duration fade(BuildContext context, Duration d) =>
+      reduced(context) && d > fast ? fast : d;
+
+  /// Lays out an AnimatedSwitcher's old and new child from the top-left
+  /// (Flutter centres them by default, so a narrower new child would start
+  /// in the middle and jump left when the old one is removed).
+  static Widget topLeft(Widget? current, List<Widget> previous) =>
+      Stack(alignment: Alignment.topLeft, children: [...previous, ?current]);
+
+  /// The same, anchored top-right (stamps sit in the top-right corner).
+  static Widget topRight(Widget? current, List<Widget> previous) =>
+      Stack(alignment: Alignment.topRight, children: [...previous, ?current]);
 }
 
 /// Colours and text styles that Material's ColorScheme / TextTheme cannot hold.

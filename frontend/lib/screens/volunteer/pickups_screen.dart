@@ -283,8 +283,11 @@ class _RunSlipState extends State<_RunSlip> {
       // A plain short fade when the stamp changes; the stamp drop is kept
       // for the canteen approving a request.
       stamp: AnimatedSwitcher(
-        duration: FlMotion.of(context, FlMotion.base),
+        duration: FlMotion.fade(context, FlMotion.base),
         switchInCurve: FlMotion.easeOut,
+        switchOutCurve: FlMotion.easeOut,
+        // Stamps differ in width; anchor them to the corner they sit in.
+        layoutBuilder: FlMotion.topRight,
         child: r.isCancelled
             ? StatusStamp.custom('HANDED BACK', key: ValueKey(r.status), color: fl.stampGrey)
             : StatusStamp(r.stamp, key: ValueKey(r.status)),
@@ -315,8 +318,10 @@ class _RunSlipState extends State<_RunSlip> {
         ],
         const SizedBox(height: FlSpace.md),
         AnimatedSwitcher(
-          duration: FlMotion.of(context, FlMotion.fast),
+          duration: FlMotion.fade(context, FlMotion.fast),
           switchInCurve: FlMotion.easeOut,
+          switchOutCurve: FlMotion.easeOut,
+          layoutBuilder: FlMotion.topLeft,
           child: KeyedSubtree(key: ValueKey(r.status), child: _nextStep(context)),
         ),
       ],

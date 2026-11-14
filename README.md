@@ -47,7 +47,8 @@ What works today:
   Approve and Turn down, a printed tally, the **Post food** form (bottom
   sheet on phones, dialog on wider screens), and **Listings** with Open /
   Closed tabs, Edit and Delete. Approving a request drops an APPROVED rubber
-  stamp onto it (skipped when the device asks for reduced motion).
+  stamp onto it (when the device asks for reduced motion, the stamp just fades
+  in at rest).
 - **Volunteer (Pickups):** every run printed as a pickup slip (what to
   carry, from where, to whom, their phone, pickup deadline, and the
   assigned / picked up / delivered times). One large button per run:
@@ -279,6 +280,14 @@ listings and alerts, the volunteer's pickups and alerts, the admin's
 overview, assign picker, approvals, listings and empty alerts. Names follow
 `<role>-<screen>-<width>-<theme>.jpg`. They were taken from the release web
 build with seeded data.
+
+### Animation review
+
+`/review-animations` (Emil Kowalski's animation standards) was run over every
+animation after Stage 5. What it changed is listed in `PROGRESS.md`; in short:
+reduced motion now keeps short fades and drops only movement, navigation tabs
+and radio choices change instantly, the impact figures count up once per
+session, and cross-fades no longer jump sideways at the end.
 
 ### Design audit
 

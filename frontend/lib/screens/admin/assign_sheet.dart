@@ -26,6 +26,8 @@ Future<String?> showAssignSheet(BuildContext context, ClaimRequest claim) {
   if (context.isMobile) {
     return showModalBottomSheet<String>(
       context: context,
+      // The sheet slides up; with reduced motion it simply appears.
+      sheetAnimationStyle: FlMotion.reduced(context) ? AnimationStyle.noAnimation : null,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => SafeArea(
@@ -177,10 +179,16 @@ class _VolunteerOption extends StatelessWidget {
         selected: selected,
         focusRadius: FlRadius.control,
         semanticLabel: '${v.name}, ${v.organization}, ${load.toLowerCase()}',
-        builder: (context, hovered) => AnimatedContainer(
-          duration: FlMotion.of(context, FlMotion.fast),
+        // Not animated: picking a radio option should answer at once, and an
+        // animated border width would push the text around while it ran.
+        // The selected border is 1px thicker, so the padding is 1px smaller
+        // and the content stays exactly where it was.
+        builder: (context, hovered) => Container(
           constraints: const BoxConstraints(minHeight: 56),
-          padding: const EdgeInsets.symmetric(horizontal: FlSpace.md, vertical: FlSpace.sm),
+          padding: EdgeInsets.symmetric(
+            horizontal: FlSpace.md - (selected ? 1 : 0),
+            vertical: FlSpace.sm - (selected ? 1 : 0),
+          ),
           decoration: BoxDecoration(
             color: selected ? fl.surfaceSunken : (hovered ? fl.surfaceSunken : fl.surface),
             borderRadius: BorderRadius.circular(FlRadius.control),

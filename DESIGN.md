@@ -202,9 +202,14 @@ to a change. If it does none of these it is removed.
 - **Stamp drop:** the APPROVED stamp starts at scale 1.9, opacity 0, rotation -16°,
   and lands at scale 1, rotation -6° with a light haptic. Used only when a donor
   approves a claim.
-- **Reduced motion:** when `MediaQuery.disableAnimations` is true, list stagger,
-  count-up, Hero flourish and the stamp drop are skipped and the final state is
-  shown immediately. Short opacity fades remain because they aid comprehension.
+- **Reduced motion:** when `MediaQuery.disableAnimations` is true, everything
+  that moves or scales is skipped: the list stagger and rise, the count-up,
+  the Hero flight, the press scale, bottom-sheet slides and the stamp's fall
+  and turn. Short opacity fades remain (at most 120ms) because they aid
+  comprehension: list items fade in together, page and panel cross-fades stay,
+  and the APPROVED stamp fades in at rest.
+- **Frequency:** things tapped many times a day (navigation tabs, radio
+  choices) change instantly; the page cross-fade is their only motion.
 
 ---
 
@@ -286,8 +291,9 @@ Always-dark `board` surface with a thin wooden frame, a chalk-underlined heading
 and items listed like a menu board: dish name, dotted leader, quantity in mono.
 
 ### ImpactNumber
-A very large Bricolage number with a small uppercase mono caption. Counts up once
-when it first appears.
+A very large Bricolage number with a small uppercase mono caption. Counts up from
+0 the first time a figure appears in a session; on later visits it starts from
+the value it last showed, so it stands still, or counts only what was added.
 
 ### VegMarker
 The Indian food marking: a green square outline with a green dot (veg), a red
