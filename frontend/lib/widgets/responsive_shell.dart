@@ -498,8 +498,8 @@ class _BadgedIcon extends StatelessWidget {
             right: -8,
             top: -5,
             child: Container(
-              constraints: const BoxConstraints(minWidth: 18),
-              height: 18,
+              // Minimums, so the count still fits when text is enlarged.
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
               padding: const EdgeInsets.symmetric(horizontal: 4),
               alignment: Alignment.center,
               decoration: BoxDecoration(color: fl.chilliDeep, borderRadius: BorderRadius.circular(9)),

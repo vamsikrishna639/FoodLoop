@@ -187,12 +187,19 @@ abstract final class AppTheme {
         style: FilledButton.styleFrom(
           backgroundColor: p.ink,
           foregroundColor: p.paper,
-          disabledBackgroundColor: p.ink.withValues(alpha: 0.4),
-          disabledForegroundColor: p.paper,
+          // Disabled = an empty paper slot with soft ink text and an outline,
+          // not a faded version of the colour (a pale fill with white text
+          // is hard to read and looks broken rather than "not yet").
+          disabledBackgroundColor: p.surfaceSunken,
+          disabledForegroundColor: p.inkSoft,
           minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(horizontal: FlSpace.xl),
           textStyle: textTheme.labelLarge,
           shape: controlShape,
+        ).copyWith(
+          side: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.disabled) ? BorderSide(color: p.controlBorder) : null,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(

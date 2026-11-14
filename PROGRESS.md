@@ -1,14 +1,88 @@
 # FoodLoop — Progress
 
-Updated on 2026-11-14 at the end of Stage 4.
+Updated on 2026-11-14 at the end of Stage 5.
 
 ## Current stage
 
-**Stage 4 — Volunteers, notifications, dashboards: complete and committed**
-("Stage 4: volunteers, notifications, dashboards, approvals"). Waiting for
-the user to say "continue" before starting Stage 5.
+**Stage 5 — Testing and polish: complete and committed**
+("Stage 5: Postman tests, screenshots, audit and polish, demo script").
+All five stages of `PROMPT.md` Part J are built. Waiting for the user.
 
-## Done in Stage 4
+One Stage 5 item could not be done from here: **`review-animations`**. The
+skill is set to run only when the user starts it, so it refused to load from
+inside the session. Run `/review-animations` to do it.
+
+## Done in Stage 5
+
+**Postman collection** (`backend/postman/FoodLoop.postman_collection.json`)
+- 80 requests, 231 checks, six folders; a collection-level check that every
+  response uses the `{ success, message, data }` envelope.
+- Negative tests: over-allocation (second approval refused, listing still
+  6 reserved, request back to pending), wrong role (8 cases), invalid claim
+  and pickup transitions (7 cases), duplicate request (409), double assign
+  (409), expired listing, registering as admin, bad ids and filters, field
+  errors.
+- Self-contained: it posts its own listing, so it needs only the seeded
+  logins and can run more than once. `npm run test:api` runs it with newman.
+
+**Stage 4 leftovers**
+- Alerts link to their page (`alertTarget` in `alerts_screen.dart`): tap marks
+  read and opens Board / My requests / Pickups / Counter by type and role; the
+  page name is printed under the line with an arrow; the screen-reader label
+  says "Open My requests". Read lines that lead somewhere stay tappable.
+- Disabled buttons: a sunken paper slot with soft ink text and an outline, in
+  the theme for every filled button and in `FlButton`'s accent variant. The
+  "Choose a volunteer" button no longer shows as a pale chilli.
+
+**Audit** (`/impeccable audit`, report in `docs/stage5-audit.md`, 16/20 Good,
+no P0/P1). The platform line in PRODUCT.md (`adaptive — Flutter, ...`) is read
+by the launcher as unknown and treated as web; the native audit reference was
+used, as in Stage 4. The launcher has no `audit-storage` command, so the report
+was saved in `docs/`. Fixed from it:
+- The TokenCard Hero no longer flies when reduced motion is on.
+- Filter tags and the nav badge use minimum heights, so large text fits.
+- Listing photos decode at the size shown (`cacheWidth`).
+Left as P3: lists are Columns, not lazy builders (fine at tens of items); the
+8px printed "TOKEN" caption in the empty-photo block (decorative).
+
+**Polish** (`/impeccable polish`, from the full screenshot pass)
+- The volunteer's Pickups opened on an empty "Assigned 0" tab while a run was
+  "On the way". It now opens on the first tab with work, once per visit.
+- No other defects found across 19 screens x 3 widths x 2 themes plus the
+  Post food form and the assign picker: no overflow, dark mode correct
+  everywhere (chalkboard stays dark, stamps readable, chart colours brightened).
+
+**README**: demo script (canteen posts → recipient requests → canteen approves
+→ admin assigns → volunteer collects and delivers → what each role sees), the
+Testing section (collection, screenshots, audit), Stage 5 marked done.
+
+## Verified in Stage 5
+
+All against a second API on port 5050 with its own database
+(`foodloop_stage5`); the user's `foodloop` database was not touched.
+- newman: 80 requests, 231 assertions, 0 failures, twice in a row on the
+  same database.
+- Screenshots: 126 files of the release web build in `docs/screenshots/`
+  (19 screens and 2 overlays, each at 3 widths x 2 themes; the volunteer's 6
+  retaken after the tab fix), reviewed as contact sheets. Browser console: no errors
+  from the app.
+- Clicked in Playwright: an alert line → lands on `/#/requests`; Meera opens on
+  "On the way 1" with **Mark delivered**; the assign picker shows the new
+  disabled button in light and dark.
+- **The demo flow through the UI** on a fresh seed: Ananya at 360 steps to 4
+  and taps **Request 4 plates** → the canteen taps **Approve** on that slip →
+  the admin taps **Assign volunteer**, picks Kiran, **Assign Kiran** → Kiran at
+  360 taps **I've collected it**, then **Mark delivered** (DELIVERED stamp,
+  "Delivered. Thank you for the run") → the API shows the request delivered by
+  Kiran Kumar, impact 112 → 116, and Ananya's My requests says 52 portions
+  received. The posting step was done through `POST /api/foods` (the same
+  call the form makes) because Playwright cannot type reliably into Flutter
+  web text fields; the form itself was clicked through in Stage 2.
+- `flutter analyze`: no issues. `flutter build web` from `C:\FoodLoop\frontend`.
+
+## Stage 4 (summary kept for reference)
+
+### Done in Stage 4
 
 **Shape round** (`/impeccable shape`): one question, answered: the activity
 feed is **scoped per role** (admin everything; donor their own listings;
@@ -84,7 +158,7 @@ for recipients).
   received so far". `ComingSoonScreen` is gone. `FadeIn` moved to
   `widgets/fade_in.dart` and is shared.
 
-## Verified in Stage 4
+### Verified in Stage 4
 
 - API: 63 checks in a Node script against a second server on port 5050 with
   its own database (`foodloop_stage4`), all passing after the last change.
@@ -132,66 +206,53 @@ is a design review without the web detector):
 
 ## Known issues / not verified
 
-- **The user's own API on port 5000 must be restarted** (`npm start` does
-  not reload): without a restart the new endpoints answer "Route not found"
-  and the app shows error states on the new pages.
-- **Run `npm run seed` once** for the Stage 4 demo data (it wipes the
-  `foodloop` database). The user's database was not touched from here; all
-  testing used `foodloop_stage4`.
-- Not tried by hand: the bottom-sheet version of the assign picker (only
-  the dialog was clicked), Reject on Approvals in the browser (verified
-  through the API), "Can't do this run" in the browser (verified through the
-  API), on a real Android device the lifecycle pause.
-- The polling test hides the tab by overriding `document.visibilityState`
-  and sending `visibilitychange`, which is what Flutter's engine listens to;
-  a real background tab was not tried in headless Chrome.
-- Still open from earlier stages: no Android run yet, no Flutter tests,
-  Google Fonts need internet on first load, the stamp drop's reduced-motion
-  path not tried by hand.
+- **`review-animations` has not run** (user-only skill, see above).
+- **Restart the API on port 5000 and run `npm run seed`** before the demo:
+  the user's database was not touched from here.
+- **`frontend/build/web` was last built for port 5050** during testing and is
+  rebuilt for the default API before the commit; if in doubt, run
+  `flutter build web` again from `C:\FoodLoop\frontend`.
+- The Postman collection was run with newman, not inside the Postman or
+  Thunder Client apps (same file format, v2.1).
+- Not tried by hand: the bottom-sheet assign picker's Assign button (only
+  shown in a screenshot at 360), on a real Android device the lifecycle pause
+  and the app in general (no Android run yet), the stamp drop's
+  reduced-motion path, text scaling at 200% on a device.
+- No Flutter tests; Google Fonts need internet on first load.
 
 ## Assumptions made
 
-- **Activity is scoped per role** (user's choice). Recipients also see
-  "posted" lines for new food, because the counter is public anyway.
-- **The activity feed and the badge poll every 20 seconds.** "Not in the
-  foreground" means the tab or app is hidden (`hidden` / `paused`); a visible
-  but unfocused window (`inactive`) keeps polling.
-- **On phones and tablets there is no activity rail**, so only the badge is
-  polled there (the brief puts the feed on desktop).
-- **Activity and dashboard figures are computed, not stored**, from dates
-  that already exist. No new collection.
-- **The chart shows portions delivered per day** (the deliveries count is in
-  the screen-reader summary and the sentence), because counts of 0 to 2
-  runs make a flat chart. Days use the server's local time.
-- **A volunteer can hand back an assigned run**; the transition table also
-  allows `picked_up → cancelled`, which the API accepts but the app does not
-  offer (food in hand should be delivered or reported to the admin).
-- **A handed-back run keeps the request approved** and its portions
-  reserved; it goes back to the admin's list. No one is notified (rule 8
-  does not list it); the admin sees it in the list and the activity feed.
-- **Listing completion** as described above; a listing with open portions
-  stays open after a delivery.
-- **Assigning is refused after the pickup deadline**; such a request shows a
-  turmeric note in the admin's list instead of a button.
-- **Rejected accounts are not notified** (rule 8 lists only approval); their
-  waiting screen already says the account was not approved.
-- **The admin gets no notifications** (none are listed for the admin in rule
-  8); their Alerts page shows the empty state.
-- **Only one admin assigns**, so "one live run per request" is a check
-  before create, not an atomic guard (unlike claim approval).
-- **Seed has ten listings**, two more than "about eight", to give the 7-day
-  chart something to show.
+Stage 5:
+- **Screenshots are kept in the repo** (`docs/screenshots/`, JPEG, about 7 MB)
+  as the record the brief asks for.
+- **"Every screen"** means every route plus the two overlays (Post food form,
+  assign picker); the listing detail is shown for a token with an open request.
+- **Alerts link to a page, not to one item**: notifications store no ids
+  (Part E lists only userId, message, type, isRead, createdAt).
+- **The collection creates its own listing** instead of relying on seed ids,
+  so it can run on any seeded database; it is meant for a test run, then a
+  re-seed before the demo.
+- **The concurrent-approval case** stays covered by the Stage 3/4 Node script;
+  a Postman runner sends one request at a time.
+
+Earlier stages (unchanged):
+- Activity is scoped per role; recipients also see "posted" lines.
+- The feed and badge poll every 20 seconds, only while the app is in front.
+- No activity rail on phones and tablets.
+- Activity and dashboard figures are computed, not stored.
+- The chart shows portions delivered per day.
+- A volunteer can hand back an assigned run; it returns to the admin's list
+  and keeps its portions reserved.
+- Assigning is refused after the pickup deadline.
+- Rejected accounts and the admin get no notifications.
+- Only one admin assigns, so "one live run per request" is a check before
+  create.
+- The seed has ten listings.
 
 ## Exact next step to resume
 
-Wait for "continue", then start **Stage 5 — Testing and polish**
-(`PROMPT.md` Part J):
-
-1. Postman collection (exported JSON) with negative tests: over-allocation,
-   wrong role, invalid claim and pickup transitions, double assign.
-2. Playwright screenshots at 360 / 768 / 1440 for every screen in both
-   themes; dark mode check.
-3. `/impeccable audit` + `/impeccable polish` across the app; review-animations
-   and fix its findings. Include the P3s above.
-4. README: setup, test logins, and a demo script for one full donor →
-   recipient → admin assigns → volunteer → delivered flow.
+Nothing is left in `PROMPT.md` Part J except `review-animations`. Next:
+1. The user runs `/review-animations`; fix what it finds, retake the affected
+   screenshots, update the docs, commit and push.
+2. Before the viva: `npm run seed`, restart the API, follow the README demo
+   script once.

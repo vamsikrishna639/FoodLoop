@@ -17,7 +17,7 @@ the canteen's own area is a chalkboard. The full design system is in
 
 ## Build status
 
-The app is built in five stages. **Stages 1 to 4 are complete.**
+The app is built in five stages. **All five stages are complete.**
 
 | Stage | Contents | Status |
 |---|---|---|
@@ -25,7 +25,7 @@ The app is built in five stages. **Stages 1 to 4 are complete.**
 | 2 | Food listings: post, edit, delete, browse, detail; welcome slides | Done |
 | 3 | Claim workflow: request, approve, reject, cancel; My requests | Done |
 | 4 | Volunteers, notifications, dashboards, approvals | Done |
-| 5 | Testing and polish | Not started |
+| 5 | Testing and polish: Postman collection, screenshots, audit, demo script | Done |
 
 What works today:
 
@@ -63,8 +63,10 @@ What works today:
   wide screens, slips on phones. Approved users are notified.
 - **Admin:** "All listings", with the same Edit and Delete.
 - **Alerts (every role):** notifications grouped by day, unread ones marked
-  with a dot and the word NEW; tap one to mark it read, or **Mark all read**.
-  The unread count shows on the bell in the navigation.
+  with a dot and the word NEW. Tapping one marks it read and opens the page
+  it is about (a canteen's news opens the Board, a recipient's My requests,
+  a volunteer's Pickups); the page's name is printed under each line.
+  **Mark all read** clears them all. The unread count shows on the bell.
 - **Activity (desktop):** the right-hand rail lists recent events, limited to
   what each role may see (the admin sees everything; a donor sees their own
   listings; recipients and volunteers see their own requests or runs, plus
@@ -173,6 +175,116 @@ What the seed sets up for the claim workflow:
   Pulao, Idli Sambar) fill the 7-day chart: 112 portions in all.
 - **Rohit** is waiting in Approvals.
 
+## Demo script
+
+One full run from posting to delivery, about five minutes. Start from a
+fresh seed (`npm run seed`; the API can keep running) and open the app in
+Chrome. Sign out between steps from **Profile**, or use a
+second browser profile so two people are signed in side by side.
+
+1. **Canteen posts food.** Sign in as `canteen@foodloop.test`. Press
+   **Post food**. Enter "Veg Pulao" in *What is it?*, keep *Veg*, quantity
+   `10`, *plates*, leave the times as they are (prepared now, pickup in three
+   hours) and press **Print token**. The slip appears on the chalkboard
+   "Today's Surplus" with its own number, e.g. `#FL-0011`.
+2. **Recipient asks for a share.** Sign in as `ananya@foodloop.test`. On
+   **Today's Counter** open the Veg Pulao token (scroll down: the list is
+   soonest deadline first). Press the plus button three times so it reads 4,
+   and press **Request 4 plates**. The area changes to "You asked for 4
+   plates" with a PENDING stamp.
+3. **Canteen approves.** Sign in as the canteen again. Under **Requests** on
+   the Board, find Ananya's 4 plates of Veg Pulao and press **Approve**. The
+   APPROVED stamp drops onto the slip (the one animation kept for this
+   moment). The chalkboard line now shows 6 left.
+   *To show the over-allocation guard here:* Ananya's 6 and Farhan's 8
+   packets of Veg Grilled Sandwiches are both pending on a 12-packet token.
+   Approve one, then the other: the second is refused ("Only 6 packets
+   left, but this request asks for 8 packets" if Ananya's went first), and
+   it stays pending.
+4. **Admin assigns a volunteer.** Sign in as `admin@foodloop.test`. On
+   **Overview**, **Needs a volunteer** lists the Veg Pulao request (under
+   Farhan's dal from the seed, oldest approval first). Press
+   **Assign volunteer**, choose **Kiran Kumar** (the button reads "Choose a
+   volunteer" until you do) and press **Assign Kiran**. The slip gets an
+   ASSIGNED stamp.
+5. **Volunteer collects and delivers.** Sign in as `kiran@foodloop.test`
+   (works best at phone width: Chrome DevTools, device toolbar). On
+   **Pickups** (the Assigned tab, newest first), the Veg Pulao slip shows what to carry, from where,
+   to whom and their phone. Press **I've collected it** (PICKED UP stamp),
+   then **Mark delivered** (DELIVERED stamp).
+6. **Everyone sees the result.**
+   - Ananya: **My requests** prints the full receipt (Requested, Approved,
+     Volunteer Kiran Kumar, Picked up, Delivered) and "52 portions received
+     so far"; **Alerts** has "Kiran Kumar will collect your Veg Pulao" and
+     "Veg Pulao (4 plates) was delivered by Kiran Kumar"; tap one to open My
+     requests.
+   - Admin: the portions-delivered figure goes from 112 to 116 and today's
+     bar on the 7-day chart grows by 4.
+   - Canteen: "Delivered, ever" on the Board tally goes up by 4.
+
+Food counts as delivered only at step 5. Until then every figure stays the
+same, which is business rule 4.
+
+## Testing
+
+### API: Postman collection
+
+`backend/postman/FoodLoop.postman_collection.json` holds 80 requests with 231
+checks, in six folders: sign in, auth and access, listings, requests,
+pickups, and admin / notifications / dashboards. The negative tests include:
+
+- **Over-allocation:** two requests for 6 of a 10-box listing; approving the
+  second is refused ("Only 4 boxes left"), the listing still has exactly 6
+  reserved, and the refused request is back to pending.
+- **Wrong role:** a recipient approving, an admin approving (donor only), a
+  recipient posting food, a volunteer editing a listing, a donor assigning a
+  volunteer, another volunteer updating someone's run, a recipient listing
+  users, a pending account browsing food.
+- **Invalid transitions:** approve or turn down an approved request, approve
+  or cancel a turned-down one, a pickup from assigned straight to delivered,
+  picked up twice, delivered to cancelled, cancelling after pick-up.
+- **Duplicates and bad input:** a second open request for the same listing,
+  assigning the same request twice, a request on an expired listing,
+  registering as admin, bad ids, bad filters, missing fields (each with its
+  field message).
+
+To run it in Postman or Thunder Client: start the API on port 5000 with
+fresh seed data, import the file, and run the whole collection in order with
+the Collection Runner (later requests use tokens and ids saved by earlier
+ones). From the command line:
+
+```
+cd backend
+npm run test:api
+```
+
+This runs the same file with newman (downloaded by `npx` on first use). The
+collection makes its own listing, so it passes on any seeded database and
+can be run more than once, but it does add requests and a delivered run, so
+run `npm run seed` again before a demo. To point it at another port:
+`npx -y newman@6.2.1 run postman/FoodLoop.postman_collection.json --env-var baseUrl=http://localhost:5050/api`.
+
+The concurrent case (two approvals arriving at the same instant) cannot be
+expressed in a collection that runs one request at a time. It was checked in
+Stages 3 and 4 with a Node script that fired both requests together: exactly
+one succeeds.
+
+### Screenshots
+
+`docs/screenshots/` has every screen at 360, 768 and 1440 pixels wide, in the
+paper (light) and chalkboard (dark) themes: welcome, sign in, register,
+waiting for approval, component gallery, the recipient's counter, token
+detail, My requests, alerts and profile, the donor's Board, Post food form,
+listings and alerts, the volunteer's pickups and alerts, the admin's
+overview, assign picker, approvals, listings and empty alerts. Names follow
+`<role>-<screen>-<width>-<theme>.jpg`. They were taken from the release web
+build with seeded data.
+
+### Design audit
+
+`docs/stage5-audit.md` is the `/impeccable audit` report from Stage 5
+(16/20, "Good"), with what was found and fixed.
+
 ## Component gallery
 
 Open `http://localhost:<port>/#/gallery` in the running web app (no login
@@ -198,6 +310,7 @@ backend/
                       completion, allowed status changes (transitions.js),
                       notifications, quantity wording
   seed/seed.js        demo data
+  postman/            Postman collection with the API checks (npm run test:api)
 
 frontend/lib/
   core/               theme tokens, router, API client, config, breakpoints, date formats
@@ -307,8 +420,8 @@ flutter analyze
 flutter build web
 ```
 
-`flutter analyze` should report "No issues found". The backend has no test
-runner yet; a Postman collection with negative tests is part of Stage 5.
+`flutter analyze` should report "No issues found". The backend is checked
+with the Postman collection (see Testing).
 
 ### If the web build shows the wrong fonts or empty icon boxes
 

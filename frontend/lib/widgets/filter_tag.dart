@@ -33,7 +33,8 @@ class FilterTag extends StatelessWidget {
           child: AnimatedContainer(
             duration: FlMotion.of(context, FlMotion.fast),
             curve: FlMotion.easeOut,
-            height: 38,
+            // A minimum, not a fixed height, so large text sizes still fit.
+            constraints: const BoxConstraints(minHeight: 38),
             padding: const EdgeInsets.symmetric(horizontal: FlSpace.md),
             decoration: BoxDecoration(
               color: selected ? fl.ink : (hovered ? fl.surfaceSunken : fl.surface),

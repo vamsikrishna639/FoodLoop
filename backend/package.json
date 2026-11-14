@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "seed": "node seed/seed.js"
+    "seed": "node seed/seed.js",
+    "test:api": "npx -y newman@6.2.1 run postman/FoodLoop.postman_collection.json"
   },
   "license": "MIT",
   "dependencies": {

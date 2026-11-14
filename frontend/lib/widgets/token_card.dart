@@ -98,7 +98,9 @@ class TokenCard extends StatelessWidget {
             builder: (context, hovered) => slip(hovered),
           );
 
-    if (heroTag != null) {
+    // With reduced motion there is no Hero: the card does not fly, the page
+    // simply appears (both ends are TokenCards, so neither has a Hero).
+    if (heroTag != null && !FlMotion.reduced(context)) {
       // Material keeps text styles intact while the card flies between screens.
       card = Hero(tag: heroTag!, child: Material(type: MaterialType.transparency, child: card));
     }
@@ -277,6 +279,8 @@ class _TicketBlock extends StatelessWidget {
         url,
         width: size,
         height: size,
+        // Decode at the size shown, not the photo's full size.
+        cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round(),
         fit: BoxFit.cover,
         semanticLabel: 'Photo of $title',
         // A broken link falls back to the printed block.

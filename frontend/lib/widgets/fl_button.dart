@@ -53,7 +53,11 @@ class FlButton extends StatelessWidget {
           onPressed: onTap,
           // Keep the ink colour while loading so the button does not flash grey.
           style: loading
-              ? FilledButton.styleFrom(disabledBackgroundColor: fl.ink, disabledForegroundColor: fl.paper)
+              ? FilledButton.styleFrom(
+                  disabledBackgroundColor: fl.ink,
+                  disabledForegroundColor: fl.paper,
+                  side: BorderSide.none,
+                )
               : null,
           child: content,
         ),
@@ -62,8 +66,11 @@ class FlButton extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: fl.chilliDeep,
             foregroundColor: fl.onChilli,
-            disabledBackgroundColor: loading ? fl.chilliDeep : fl.chilliDeep.withValues(alpha: 0.4),
-            disabledForegroundColor: fl.onChilli,
+            // While loading it keeps its colour. Otherwise disabled looks the
+            // same as every disabled button (the theme's sunken slot).
+            disabledBackgroundColor: loading ? fl.chilliDeep : fl.surfaceSunken,
+            disabledForegroundColor: loading ? fl.onChilli : fl.inkSoft,
+            side: loading ? BorderSide.none : null,
           ),
           child: content,
         ),

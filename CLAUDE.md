@@ -13,7 +13,7 @@ Read these before working:
 - `DESIGN.md` — the "Canteen Token" design system. It is a fixed brief, and it is implemented in `frontend/lib/core/theme/`.
 - `PRODUCT.md` — product context used by the `impeccable` skill.
 
-**Current stage:** Stages 1–4 are done (design system and auth; food listings; claim workflow; volunteers, notifications, dashboards and approvals). Stage 5 (Postman collection, full screenshot pass, audit and polish, demo script) is next.
+**Current stage:** All five stages are done (design system and auth; food listings; claim workflow; volunteers, notifications, dashboards and approvals; testing and polish). Still open from Stage 5: the `review-animations` skill can only be started by the user (`/review-animations`), so it has not run yet.
 
 ## Commands
 
@@ -23,6 +23,7 @@ Backend (from `backend/`; needs a local MongoDB on `127.0.0.1:27017` and a `.env
 npm start        # API on http://localhost:5000
 npm run dev      # same, restarts on file changes (node --watch)
 npm run seed     # WIPES the foodloop database, then inserts demo data
+npm run test:api # runs postman/FoodLoop.postman_collection.json with newman (needs the API on :5000)
 ```
 
 Frontend (from `frontend/`):
@@ -37,13 +38,14 @@ flutter test test/some_test.dart   # single test file
 
 On Windows, run `flutter build web` from `C:\FoodLoop\frontend` (upper-case drive letter). From a lower-case `c:` path, Flutter 3.50 leaves fonts, icons and manifests out of `build/web`; the fix is to delete `build/web` and `.dart_tool/flutter_build` and rebuild from `C:\`.
 
-There is no backend test runner or linter. Backend endpoints are checked with curl or a throwaway Node script against a running server; a second copy can run beside the user's with `$env:PORT='5050'; node src/server.js` (dotenv does not override a variable already set). Point that copy at its own database so seeding never wipes the user's data: `$env:MONGO_URI='mongodb://127.0.0.1:27017/foodloop_test'` before both `node seed/seed.js` and `node src/server.js`. A Postman collection with negative tests is planned for Stage 5.
-
+The backend's tests are the Postman collection in `backend/postman/` (80 requests, 231 checks, negative tests for over-allocation, wrong role and invalid transitions). It is generated as plain JSON; when an endpoint changes, edit the matching request in the file. Postman and newman run the collection script and the request script in one scope, so every test script is wrapped in its own `{ }` block (top-level `const`s would collide). Run it against another server with `--env-var baseUrl=http://localhost:5050/api`. There is no linter. Ad-hoc checks use curl or a throwaway Node script against a running server; a second copy can run beside the user's with `$env:PORT='5050'; node src/server.js` (dotenv does not override a variable already set). Point that copy at its own database so seeding never wipes the user's data: `$env:MONGO_URI='mongodb://127.0.0.1:27017/foodloop_test'` before both `node seed/seed.js` and `node src/server.js`. 
 `npm start` does not reload. After adding routes, restart the server, or new endpoints answer 404 ("Route not found"). Use `npm run dev` while working on the backend.
 
 To point a web build at another API port: `flutter build web --dart-define=API_BASE_URL=http://localhost:5050/api`. Rebuild without it before handing over, because `build/web` keeps whatever URL it was built with.
 
-For Playwright checks, sign in through the API and put the session in local storage instead of typing (shared_preferences on web stores JSON-encoded values): `flutter.foodloop_token` = `"<jwt>"`, `flutter.foodloop_theme` = `"light"` or `"dark"`, `flutter.foodloop_seen_welcome` = `true`. Then load `/#/<route>`. Re-seeding creates new user ids, so old tokens stop working; log in again after a seed. To click by name, turn on Flutter's semantics tree first (`document.querySelector('flt-semantics-placeholder').click()`), then use `getByRole('button', { name: ... })`. To test the polling pause, override `document.visibilityState` / `document.hidden` and dispatch a `visibilitychange` event; Flutter's engine reads those. To see an animation frame by frame, use a CDP `Page.startScreencast` (per-call screenshots are too slow).
+For Playwright checks, sign in through the API and put the session in local storage instead of typing (shared_preferences on web stores JSON-encoded values): `flutter.foodloop_token` = `"<jwt>"`, `flutter.foodloop_theme` = `"light"` or `"dark"`, `flutter.foodloop_seen_welcome` = `true`. Then load `/#/<route>`. Re-seeding creates new user ids, so old tokens stop working; log in again after a seed. To click by name, turn on Flutter's semantics tree first (`document.querySelector('flt-semantics-placeholder').click()`), then use `getByRole('button', { name: ... })`. To test the polling pause, override `document.visibilityState` / `document.hidden` and dispatch a `visibilitychange` event; Flutter's engine reads those. To see an animation frame by frame, use a CDP `Page.startScreencast` (per-call screenshots are too slow). Only on-screen widgets are in the semantics tree, so scroll (`page.mouse.wheel`) or open a page by id before looking for a button. Click with `page.mouse.click` at the element's `boundingBox()` centre, read just before the click (positions go stale after a dialog scrolls). Typing into Flutter text fields with `keyboard.type` is unreliable (the first keys are lost while focus settles); create test data through the API instead.
+
+Screenshots for the record live in `docs/screenshots/` as `<role>-<screen>-<width>-<theme>.jpg` (360 / 768 / 1440, light / dark). Retake the affected ones when a screen changes.
 
 Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `farhan@` (recipients), `kiran@` / `meera@` (volunteers), `rohit@` (pending recipient), all at `foodloop.test`.
 
@@ -89,7 +91,9 @@ Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `
 - Layering: `services/` call the API and know nothing about UI; `providers/` hold state as `ChangeNotifier`s; `screens/` read providers.
 - `core/router/app_router.dart` owns navigation rules. Its `redirect` runs on every navigation and whenever `AuthProvider` notifies, so screens never navigate after login or logout; they change auth state and the router moves the user. The same file holds each role's allowed paths and navigation destinations. Add a new shell page in three places there: the `_allowed` map, `destinationsFor`, and the `ShellRoute` routes.
 - `widgets/responsive_shell.dart` is the single frame for signed-in screens: bottom bar under 600px, rail from 600 to 1024px, sidebar plus activity rail above. `core/responsive/breakpoints.dart` holds the breakpoints.
-- Every page is real now; `ComingSoonScreen` was removed in Stage 4. Home per role: recipient `FeedScreen`, donor `BoardScreen`, volunteer `PickupsScreen`, admin `OverviewScreen`. `destinationsFor(role, unread:)` puts the unread count on the Alerts (bell) destination; the shell reads it with `context.select` so only the count rebuilds it.
+- Every page is real now; `ComingSoonScreen` was removed in Stage 4.
+- Alerts link to their page: `alertTarget(type, role)` in `screens/common/alerts_screen.dart` maps a notification type and the reader's role to a path (a donor's news → Board, a recipient's → My requests, a volunteer's → Pickups). Notifications carry no ids, so the link is to the page, not to one item. Tapping marks read and navigates.
+- Volunteer Pickups opens on the first tab with work (Assigned, else On the way), chosen once on first load; a tab the volunteer picks is never overridden. Home per role: recipient `FeedScreen`, donor `BoardScreen`, volunteer `PickupsScreen`, admin `OverviewScreen`. `destinationsFor(role, unread:)` puts the unread count on the Alerts (bell) destination; the shell reads it with `context.select` so only the count rebuilds it.
 - `widgets/fade_in.dart` is the plain short fade for stamps that are not the approval moment. `widgets/deliveries_chart.dart` is the fl_chart bar chart (no animation, values printed on the bars, a semantics summary).
 - `LabeledField` (visible label plus the semantic label on the field) lives in `screens/auth/auth_layout.dart` and is reused by every form.
 - `core/config.dart` is the only place with the API base URL (`localhost` on web, `10.0.2.2` on the Android emulator, overridable with `--dart-define=API_BASE_URL=...`).
@@ -107,6 +111,9 @@ Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `
 - The Board puts the queue in a right column only when its content is at least 900px wide. At 1440 the sidebar and activity rail leave about 690px, so the queue stacks under the chalkboard there.
 - Layouts are left-aligned and differ per role. The banned patterns are listed in `PROMPT.md` Part A.
 - Tap targets are at least 48px; custom tappables use the `Pressable` widget for press, hover, focus and semantics.
+- Disabled filled buttons (ink and accent) are a sunken paper slot with `inkSoft` text and a `controlBorder` outline (set in the theme's `filledButtonTheme`), never a faded version of the fill. While `loading`, `FlButton` keeps its real colour instead.
+- Use `minHeight` constraints rather than fixed heights on anything holding text (filter tags, the nav badge), so enlarged text still fits.
+- `TokenCard` builds its `Hero` only when motion is allowed; with reduced motion the card does not fly to the detail page. Listing photos decode at the shown size (`cacheWidth`).
 - The activity feed and the badge stop polling when the app or browser tab is not in the foreground (`LiveUpdates`). Keep any new periodic refresh inside that class rather than adding another `Timer`.
 - Only lines new since the previous poll fade into the activity rail (`ActivityProvider.fresh`); the first load and unchanged lines never animate. The badge count and the chart do not animate.
 - Approvals is a table only when its content is at least 640px wide (it fits the ~690px left at 1440 beside the rail); below that it is slips.

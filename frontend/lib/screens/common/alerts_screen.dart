@@ -9,7 +9,9 @@
 //     Kiran Kumar will collect your Chicken Biryani.
 //
 // An unread line has a chilli dot, the word NEW and a bolder message, so
-// "unread" never depends on colour alone. Tapping a line marks it read.
+// "unread" never depends on colour alone. Tapping a line marks it read and
+// opens the page it is about (see [alertTarget]).
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
@@ -17,6 +19,8 @@ import '../../core/api/api_client.dart';
 import '../../core/format.dart';
 import '../../core/theme/tokens.dart';
 import '../../models/app_notification.dart';
+import '../../models/user.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/notifications_provider.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/fl_button.dart';
@@ -24,6 +28,24 @@ import '../../widgets/page_frame.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/skeleton_token.dart';
 import '../../widgets/slip_snackbar.dart';
+
+/// Where an alert leads, as (path, page name). A notification carries only
+/// its type, so the page follows from the type and the reader's role:
+/// a donor's news is on the Board, a recipient's on My requests, a
+/// volunteer's on Pickups. Null means there is no better page to open.
+({String path, String page})? alertTarget(String type, UserRole? role) {
+  return switch ((type, role)) {
+    ('claim_submitted', UserRole.donor) => (path: '/home', page: 'Board'),
+    ('delivered', UserRole.donor) => (path: '/home', page: 'Board'),
+    ('claim_approved' || 'claim_rejected' || 'volunteer_assigned' || 'delivered', UserRole.recipient) =>
+      (path: '/requests', page: 'My requests'),
+    ('volunteer_assigned', UserRole.volunteer) => (path: '/home', page: 'Pickups'),
+    ('account_approved', UserRole.recipient) => (path: '/home', page: 'Counter'),
+    ('account_approved', UserRole.donor) => (path: '/home', page: 'Board'),
+    ('account_approved', UserRole.volunteer) => (path: '/home', page: 'Pickups'),
+    _ => null,
+  };
+}
 
 class AlertsScreen extends StatefulWidget {
   const AlertsScreen({super.key});
@@ -54,9 +76,17 @@ class _AlertsScreenState extends State<AlertsScreen> {
     if (mounted) setState(() => _markingAll = false);
   }
 
+  // Marks the line read (instantly, the server catches up) and opens the
+  // page the alert is about, if there is one.
+  void _open(AppNotification a, ({String path, String page})? target) {
+    context.read<NotificationsProvider>().markRead(a.id);
+    if (target != null) context.go(target.path);
+  }
+
   @override
   Widget build(BuildContext context) {
     final n = context.watch<NotificationsProvider>();
+    final role = context.select<AuthProvider, UserRole?>((a) => a.user?.role);
     final items = n.items;
 
     Widget body;
@@ -85,7 +115,12 @@ class _AlertsScreenState extends State<AlertsScreen> {
               child: Semantics(header: true, child: Text(g.key, style: context.text.titleMedium)),
             ),
             for (final a in g.value)
-              _AlertLine(key: ValueKey(a.id), alert: a, onTap: () => n.markRead(a.id)),
+              _AlertLine(
+                key: ValueKey(a.id),
+                alert: a,
+                target: alertTarget(a.type, role),
+                onOpen: _open,
+              ),
           ],
         ],
       );
@@ -99,7 +134,7 @@ class _AlertsScreenState extends State<AlertsScreen> {
           ? null
           : unread == 0
               ? 'All read. New ones are printed here as they happen.'
-              : '$unread unread. Tap a line to mark it read.',
+              : '$unread unread. Tap a line to open it.',
       maxWidth: 680,
       actions: [
         if (unread > 0)
@@ -118,21 +153,25 @@ class _AlertsScreenState extends State<AlertsScreen> {
 }
 
 class _AlertLine extends StatelessWidget {
-  const _AlertLine({super.key, required this.alert, required this.onTap});
+  const _AlertLine({super.key, required this.alert, required this.target, required this.onOpen});
   final AppNotification alert;
-  final VoidCallback onTap;
+  final ({String path, String page})? target;
+  final void Function(AppNotification, ({String path, String page})?) onOpen;
 
   @override
   Widget build(BuildContext context) {
     final fl = context.fl;
     final a = alert;
     final unread = !a.isRead;
+    // A line is a button while it is unread or while it leads somewhere.
+    // A read line with no page has nothing left to do.
+    final tappable = unread || target != null;
+    final action = target != null ? '. Open ${target!.page}' : (unread ? '. Mark as read' : '');
 
     return Pressable(
-      // A read line has nothing left to do, so it is not a button any more.
-      onTap: unread ? onTap : null,
+      onTap: tappable ? () => onOpen(a, target) : null,
       focusRadius: FlRadius.stamp,
-      semanticLabel: '${unread ? 'Unread. ' : ''}${a.message} ${Fmt.ago(a.createdAt)}${unread ? '. Mark as read' : ''}',
+      semanticLabel: '${unread ? 'Unread. ' : ''}${a.message} ${Fmt.ago(a.createdAt)}$action',
       builder: (context, hovered) => Container(
         constraints: const BoxConstraints(minHeight: 48),
         padding: const EdgeInsets.symmetric(vertical: FlSpace.md, horizontal: FlSpace.xs),
@@ -189,6 +228,18 @@ class _AlertLine extends StatelessWidget {
                         color: unread ? fl.ink : fl.inkSoft,
                       ),
                     ),
+                    // The page it opens, printed below the message so the
+                    // line reads as a link without relying on colour.
+                    if (target != null) ...[
+                      const SizedBox(height: FlSpace.xs),
+                      Row(
+                        children: [
+                          Text(target!.page, style: fl.monoSmall.copyWith(color: fl.inkSoft)),
+                          const SizedBox(width: FlSpace.xxs),
+                          Icon(Icons.arrow_forward, size: 14, color: fl.inkSoft),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

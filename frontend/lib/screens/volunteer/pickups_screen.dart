@@ -59,6 +59,8 @@ class PickupsScreen extends StatefulWidget {
 
 class _PickupsScreenState extends State<PickupsScreen> {
   _Tab _tab = _Tab.assigned;
+  // The opening tab is chosen once, when the runs first arrive (see build).
+  bool _tabPicked = false;
   bool _animated = false; // fade the slips in on the first load only
 
   @override
@@ -83,6 +85,14 @@ class _PickupsScreenState extends State<PickupsScreen> {
           for (final p in all ?? const <Pickup>[])
             if (pickups.tabStatusOf(p) == t.status) p,
         ];
+
+    // Open on the tab with work in it: with nothing assigned but a run in
+    // the bag, start on "On the way" instead of an empty Assigned tab.
+    // Done once, so it never overrides a tab the volunteer picked.
+    if (!_tabPicked && all != null) {
+      _tabPicked = true;
+      if (inTab(_Tab.assigned).isEmpty && inTab(_Tab.onTheWay).isNotEmpty) _tab = _Tab.onTheWay;
+    }
     final shown = inTab(_tab);
 
     final animate = !_animated && all != null && shown.isNotEmpty;
@@ -132,7 +142,10 @@ class _PickupsScreenState extends State<PickupsScreen> {
           FilterTag(
             label: '${t.label}  ${all == null ? '' : inTab(t).length}'.trim(),
             selected: _tab == t,
-            onTap: () => setState(() => _tab = t),
+            onTap: () => setState(() {
+              _tab = t;
+              _tabPicked = true;
+            }),
           ),
       ],
     );
