@@ -1,7 +1,18 @@
+# Secrets: never commit real environment files (the example is kept)
+.env
+.env.*
+!.env.example
+
 # Node
 node_modules/
-backend/.env
 npm-debug.log*
+
+# Build output and tool caches, anywhere in the repo
+build/
+.dart_tool/
+
+# Claude Code settings and installed skills (local only)
+.claude/
 
 # Flutter / Dart
 frontend/.dart_tool/
