@@ -57,6 +57,25 @@ class ListingsProvider extends ChangeNotifier {
     return saved;
   }
 
+  /// Puts a fresher copy of one listing in the list, e.g. after an approval
+  /// reserved some of it.
+  void replace(FoodListing listing) {
+    final list = items;
+    if (list == null) return;
+    final i = list.indexWhere((l) => l.id == listing.id);
+    if (i == -1) return;
+    items = [...list]..[i] = listing;
+    notifyListeners();
+  }
+
+  /// The loaded copy of a listing, if there is one.
+  FoodListing? byId(String id) {
+    for (final l in items ?? const <FoodListing>[]) {
+      if (l.id == id) return l;
+    }
+    return null;
+  }
+
   Future<String> delete(String id) async {
     final message = await _service.delete(id);
     items = [for (final l in items ?? <FoodListing>[]) if (l.id != id) l];

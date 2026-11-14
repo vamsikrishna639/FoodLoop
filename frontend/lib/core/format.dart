@@ -25,6 +25,15 @@ abstract final class Fmt {
     };
   }
 
+  /// "just now", "8 min ago", "2 h ago", then "Yesterday, 4:30 PM".
+  static String ago(DateTime t) {
+    final d = DateTime.now().difference(t);
+    if (d.inMinutes < 1) return 'just now';
+    if (d.inMinutes < 60) return '${d.inMinutes} min ago';
+    if (d.inHours < 12) return '${d.inHours} h ago';
+    return dayTime(t);
+  }
+
   /// "12 boxes", "1 kg", "1 plate".
   static String quantity(int n, String unit) {
     if (n == 1 && unit.endsWith('s')) return '1 ${unit.substring(0, unit.length - 1)}';

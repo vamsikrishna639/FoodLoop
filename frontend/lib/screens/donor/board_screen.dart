@@ -1,9 +1,9 @@
 // The donor's home: "Today's Surplus" on a chalkboard, like the menu board
-// behind a canteen counter, with a printed tally beside it.
+// behind a canteen counter, with the request queue and a printed tally.
 //
-//   Wide:   [ chalkboard (big)          ] [ tally receipt ]
-//                                         [ requests note ]
-//   Phone:  chalkboard, then tally, then requests note, stacked.
+//   Wide:   [ chalkboard (big)          ] [ requests queue ]
+//                                         [ tally receipt  ]
+//   Phone:  chalkboard, then requests, then tally, stacked.
 import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +12,7 @@ import '../../core/format.dart';
 import '../../core/theme/tokens.dart';
 import '../../models/food_listing.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/claims_provider.dart';
 import '../../providers/listings_provider.dart';
 import '../../widgets/chalkboard.dart';
 import '../../widgets/deadline_clock.dart';
@@ -21,6 +22,7 @@ import '../../widgets/paper_shapes.dart';
 import '../../widgets/pressable.dart';
 import '../../widgets/receipt_timeline.dart';
 import 'listing_form.dart';
+import 'request_queue.dart';
 
 class BoardScreen extends StatefulWidget {
   const BoardScreen({super.key});
@@ -35,7 +37,9 @@ class _BoardScreenState extends State<BoardScreen> {
     super.initState();
     // After the first frame, because a provider must not notify during a build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<ListingsProvider>().load();
+      if (!mounted) return;
+      context.read<ListingsProvider>().load();
+      context.read<ClaimsProvider>().load(incoming: true);
     });
   }
 
@@ -51,25 +55,40 @@ class _BoardScreenState extends State<BoardScreen> {
     } else {
       content = LayoutBuilder(builder: (context, box) {
         final board = _SurplusBoard(listings: listings);
-        // Very wide: board on the left, tally and requests in a column beside it.
+        final tally = _Tally(listings: listings);
+        // Wide: board on the left; the queue (the donor's actual work) at
+        // the top of the right column so it needs no scrolling, tally below.
         if (box.maxWidth >= 900) {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(flex: 3, child: board),
               const SizedBox(width: FlSpace.xl),
-              Expanded(flex: 2, child: _SidePanel(listings: listings)),
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [const RequestQueue(), const SizedBox(height: FlSpace.xxl), tally],
+                ),
+              ),
             ],
           );
         }
-        // Medium: the board across the top, the two smaller blocks side by
-        // side underneath. Phones: everything stacked.
-        return Column(children: [
-          board,
-          const SizedBox(height: FlSpace.xl),
-          // Each half needs ~320px so receipt labels stay on one line.
-          _SidePanel(listings: listings, sideBySide: box.maxWidth >= 640),
-        ]);
+        // Tablet and phone: everything stacked, requests straight after the board.
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            board,
+            const SizedBox(height: FlSpace.xxl),
+            const RequestQueue(),
+            const SizedBox(height: FlSpace.xxl),
+            // A receipt does not need the full width of a tablet.
+            Align(
+              alignment: Alignment.topLeft,
+              child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: tally),
+            ),
+          ],
+        );
       });
     }
 
@@ -191,15 +210,13 @@ class _BoardLine extends StatelessWidget {
   }
 }
 
-/// The printed tally and the requests note.
-class _SidePanel extends StatelessWidget {
-  const _SidePanel({required this.listings, this.sideBySide = false});
+/// The printed tally of today's counter.
+class _Tally extends StatelessWidget {
+  const _Tally({required this.listings});
   final ListingsProvider listings;
-  final bool sideBySide; // tally and requests next to each other
 
   @override
   Widget build(BuildContext context) {
-    final fl = context.fl;
     final items = listings.items ?? const <FoodListing>[];
     final open = listings.open;
     final now = DateTime.now();
@@ -211,7 +228,7 @@ class _SidePanel extends StatelessWidget {
     final reserved = open.fold<int>(0, (sum, l) => sum + l.reservedQuantity);
     String? n(int v) => listings.items == null ? null : '$v';
 
-    final tally = ReceiptTimeline(
+    return ReceiptTimeline(
           title: 'Counter tally',
           heading: 'Printed ${Fmt.time(now)}',
           entries: [
@@ -223,32 +240,5 @@ class _SidePanel extends StatelessWidget {
           ],
           footer: 'All units added together',
         );
-
-    final requests = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Incoming requests', style: context.text.titleLarge),
-        const SizedBox(height: FlSpace.xs),
-        Text(
-          'Requests from recipients will line up here, ready to approve or turn down. Built in Stage 3.',
-          style: context.text.bodyMedium?.copyWith(color: fl.inkSoft),
-        ),
-      ],
-    );
-
-    if (sideBySide) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: tally),
-          const SizedBox(width: FlSpace.xl),
-          Expanded(child: Padding(padding: const EdgeInsets.only(top: FlSpace.lg), child: requests)),
-        ],
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [tally, const SizedBox(height: FlSpace.xl), requests],
-    );
   }
 }

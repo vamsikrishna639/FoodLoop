@@ -13,8 +13,14 @@ const claimRequestSchema = new mongoose.Schema(
     },
     // When the donor approved or rejected (shown on the receipt timeline).
     decidedAt: { type: Date, default: null },
+    // When the recipient cancelled (also shown on the receipt).
+    cancelledAt: { type: Date, default: null },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    // Send "id" as well as "_id", like FoodListing does.
+    toJSON: { virtuals: true, versionKey: false },
+  }
 );
 
 module.exports = mongoose.model('ClaimRequest', claimRequestSchema);

@@ -17,13 +17,13 @@ the canteen's own area is a chalkboard. The full design system is in
 
 ## Build status
 
-The app is built in five stages. **Stages 1 and 2 are complete.**
+The app is built in five stages. **Stages 1, 2 and 3 are complete.**
 
 | Stage | Contents | Status |
 |---|---|---|
 | 1 | Design system, component gallery, auth, role-based shell | Done |
 | 2 | Food listings: post, edit, delete, browse, detail; welcome slides | Done |
-| 3 | Claim workflow: request, approve, reject, cancel | Not started |
+| 3 | Claim workflow: request, approve, reject, cancel; My requests | Done |
 | 4 | Volunteers, notifications, dashboards | Not started |
 | 5 | Testing and polish | Not started |
 
@@ -34,14 +34,24 @@ What works today:
 - **Recipient:** "Today's Counter" with search and filter tags, soonest
   deadline first. Phones open a token's details as a page; tablets and
   desktops show them in a side panel. The raised **Browse** button puts the
-  cursor in the search field. "Request food" is a stand-in until Stage 3.
-- **Donor:** the chalkboard "Today's Surplus" with a printed tally, the
-  **Post food** form (bottom sheet on phones, dialog on wider screens), and
-  **Listings** with Open / Closed tabs, Edit and Delete.
+  cursor in the search field.
+- **Requesting food:** on a token's details, pick a quantity (capped at what
+  is left), add an optional note for the canteen and send the request. Once
+  sent, the area shows "You asked for ..." with its stamp, a link to My
+  requests and a Cancel button; a second request for the same token is not
+  possible while one is pending or approved.
+- **My requests (recipient):** every request printed as a receipt
+  (Requested, Approved / Turned down / Cancelled, Pickup by, Volunteer,
+  Picked up, Delivered) with Active and Past tabs and Cancel where allowed.
+- **Donor:** the chalkboard "Today's Surplus", the **Requests** queue with
+  Approve and Turn down, a printed tally, the **Post food** form (bottom
+  sheet on phones, dialog on wider screens), and **Listings** with Open /
+  Closed tabs, Edit and Delete. Approving a request drops an APPROVED rubber
+  stamp onto it (skipped when the device asks for reduced motion).
 - **Admin:** "All listings", with the same Edit and Delete.
 
-Pages for later stages (requests, alerts, approvals, volunteer and admin
-homes) still show a stand-in that names the stage where they arrive.
+Pages for Stage 4 (alerts, approvals, volunteer and admin homes) still show a
+stand-in that names the stage where they arrive.
 
 ## What you need
 
@@ -71,6 +81,8 @@ On macOS or Linux use `cp` instead of `copy`.
 - `npm start` serves the API on `http://localhost:5000`. Open
   `http://localhost:5000/api/health` to check it is running.
 - `npm run dev` does the same and restarts when a file changes.
+- After pulling new code, stop and start the server again (`npm start` does
+  not reload). An old server answers new endpoints with "Route not found".
 
 The settings in `.env`:
 
@@ -120,6 +132,18 @@ Every seeded account uses the password `password123`.
 A newly registered account is always pending until an admin approves it.
 Admin accounts cannot be registered; they come only from the seed script.
 
+What the seed sets up for the claim workflow:
+
+- **Veg Grilled Sandwiches** (12 packets) has two pending requests: Ananya
+  for 6 and Farhan for 8. Approve one and the other can no longer be approved
+  in full, which shows the over-allocation guard.
+- **Chicken Biryani** has Ananya's approved request (a volunteer is assigned,
+  so she can still cancel it) and Farhan's pending request for 5.
+- **Mixed Lunch Thali** is fully reserved by Farhan, and the food is already
+  picked up, so his request can no longer be cancelled.
+- **Dal Tadka** has a turned-down request (Farhan) and a cancelled one
+  (Ananya); both of them can ask again.
+
 ## Component gallery
 
 Open `http://localhost:<port>/#/gallery` in the running web app (no login
@@ -137,19 +161,21 @@ backend/
     server.js         loads .env, connects to MongoDB, listens
     config/           database connection
     models/           User, FoodListing, ClaimRequest, Pickup, Notification, Counter
-    controllers/      request handlers
+    controllers/      request handlers (auth, foods, claims, impact)
     routes/           routes and validation rules
     middleware/       auth (protect, requireApproved, requireRole), validate, errorHandler
-    utils/            response envelope, ApiError, listing expiry sweep
+    utils/            response envelope, ApiError, listing expiry sweep,
+                      allowed status changes (transitions.js), notifications
   seed/seed.js        demo data
 
 frontend/lib/
   core/               theme tokens, router, API client, config, breakpoints, date formats
-  models/             data classes (user, food listing)
-  services/           API calls (auth, food)
-  providers/          app state (auth, theme, recipient feed, donor listings)
-  screens/            auth, common (welcome, profile), recipient, donor
-  widgets/            TokenCard, StatusStamp, ReceiptTimeline, ResponsiveShell and the rest
+  models/             data classes (user, food listing, claim request)
+  services/           API calls (auth, food, claims)
+  providers/          app state (auth, theme, recipient feed, donor listings, claims)
+  screens/            auth, common (welcome, profile), recipient (counter, detail,
+                      my requests), donor (board, request queue, listings, form)
+  widgets/            TokenCard, StatusStamp, StampDrop, ReceiptTimeline, ResponsiveShell and the rest
 ```
 
 ## API so far
@@ -170,6 +196,32 @@ failures also carry `data.errors`, a `{ field: message }` map.
 | GET | `/api/foods/:id` | approved user |
 | PATCH | `/api/foods/:id` | donor (own listing) or admin |
 | DELETE | `/api/foods/:id` | donor (own, no approved requests) or admin |
+| POST | `/api/claims` | recipient. Body: `listingId`, `requestedQuantity`, `note` (optional) |
+| GET | `/api/claims/mine` | recipient: own requests, newest first, with pickup details |
+| GET | `/api/claims/incoming` | donor: requests for own listings, pending first |
+| PATCH | `/api/claims/:id/approve` | donor (own listing) |
+| PATCH | `/api/claims/:id/reject` | donor (own listing) |
+| PATCH | `/api/claims/:id/cancel` | recipient (own request) |
+
+Claim rules enforced by the API:
+
+- **No over-allocation.** Approval reserves portions with one conditional
+  `findOneAndUpdate` (`$expr` checks `reserved + requested <= quantity`, `$inc`
+  adds it), so two approvals at the same moment cannot both succeed. A refused
+  approval leaves the request pending.
+- When every portion is reserved, the listing becomes `fully_reserved`.
+  Cancelling an approved request gives the portions back and the listing is
+  `available` again.
+- Expired listings accept no new requests and no approvals.
+- Allowed changes only: pending → approved, rejected or cancelled; approved →
+  cancelled. Anything else is a 400.
+- One open (pending or approved) request per recipient per listing (409).
+- Asking for more than is left is refused when the request is sent, and again
+  at approval.
+- A recipient cannot cancel once the volunteer has picked the food up.
+- Notifications are stored for "request submitted" (to the canteen) and
+  "approved" / "turned down" (to the recipient). They appear in the app in
+  Stage 4.
 
 Listing rules enforced by the API:
 

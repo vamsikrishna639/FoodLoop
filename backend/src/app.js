@@ -16,6 +16,7 @@ app.get('/api/health', (req, res) => ok(res, { time: new Date() }, 'FoodLoop API
 
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/foods', require('./routes/foodRoutes'));
+app.use('/api/claims', require('./routes/claimRoutes'));
 
 // Public: the one impact number shown on the welcome screen before login.
 app.get('/api/impact', require('./controllers/impactController').summary);

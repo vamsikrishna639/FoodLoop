@@ -1,153 +1,163 @@
 # FoodLoop — Progress
 
-Updated on 2026-11-14 at the end of Stage 2.
+Updated on 2026-11-14 at the end of Stage 3.
 
 ## Current stage
 
-**Stage 2 — Food listings: complete and committed**
-("Stage 2: food listings, feed, donor board, welcome"). Waiting for the user
-to say "continue" before starting Stage 3.
+**Stage 3 — Claim workflow: complete and committed**
+("Stage 3: claim workflow, stamp drop, my requests"). Waiting for the user to
+say "continue" before starting Stage 4.
 
-## Done in Stage 2
+## Done in Stage 3
 
 **Backend**
-- `/api/foods` CRUD: list (filters `status` as a comma list, `foodType`,
-  `search`, `closingSoon`), `mine`, get one, create, patch, delete.
-- Validation: format rules with express-validator in `routes/foodRoutes.js`;
-  date rules (prepared not in future, deadline in future and after prepared)
-  in `controllers/foodController.js`, sent back as field errors.
-- Ownership: donors manage only their own listings; admin can manage all.
-- Expiry: `utils/listingStatus.js` sweeps overdue `available` listings to
-  `expired` before every read. Closed listings cannot be edited.
-- Edits cannot lower quantity below `reservedQuantity`; the status is
-  recomputed after an edit. Only whitelisted fields are accepted.
-- Delete is refused (409) while a listing has approved claims; other claims
-  for it are removed with it.
-- `availableQuantity` virtual on FoodListing; `id` included in JSON.
-- Public `GET /api/impact` (portions delivered) for the welcome screen.
-- CastError message now says "Invalid id" instead of "Invalid _id".
+- `/api/claims`: create (recipient), `mine` (recipient), `incoming` (donor),
+  `:id/approve`, `:id/reject` (donor, own listing), `:id/cancel` (recipient,
+  own request). Routes and validation in `routes/claimRoutes.js`, logic in
+  `controllers/claimController.js`.
+- Atomic reservation: approval first flips the claim `pending → approved` with
+  the status in the filter (stops double approvals), then reserves with one
+  `findOneAndUpdate` using `$expr` (`reserved + requested <= quantity`, listing
+  still `available`, deadline in the future) and `$inc`. If the reservation
+  matches nothing, the claim is put back to `pending` and the reply says how
+  much is left.
+- `fully_reserved` when everything is reserved; cancelling an approved claim
+  `$inc`s the portions back and sets the listing `available` again.
+- `utils/transitions.js`: one table each for claim and pickup status changes;
+  anything else is a 400 with a plain message ("An approved request cannot be
+  turned down").
+- Rule 7: a second open request for the same listing is a 409. Asking for more
+  than is left is refused at creation with a `requestedQuantity` field error.
+- Expired listings: no new requests, no approvals (the expiry sweep runs
+  first).
+- Cancelling: allowed while the pickup is missing or `assigned` (that pickup is
+  cancelled too); refused after `picked_up` / `delivered`.
+- `utils/notify.js`; notifications written for `claim_submitted`,
+  `claim_approved`, `claim_rejected`.
+- `ClaimRequest` gained `cancelledAt` and sends `id` in JSON. Claim replies
+  populate the listing (with its donor) and the recipient, and add a `pickup`
+  summary (volunteer name and times).
+- Seed: a second pending request on the sandwiches (6 + 8 asked of 12) for the
+  over-allocation demo; the cancelled claim has a `cancelledAt`.
 
 **Frontend**
-- `FoodListing` model, `FoodService`, `FeedProvider` (recipient),
-  `ListingsProvider` (donor/admin). Both providers reset on sign-out.
-- Welcome (`/welcome`): three slides on phones; split layout at 900px and
-  wider with the real impact number. Shown once per device (flag in
-  shared_preferences, also set on any sign-in).
-- Recipient "Today's Counter": search (300ms debounce), filter tags
-  (veg / non-veg / mixed / closing soon), token count, skeletons, empty,
-  no-match and error states, fade-up on first load only. Phones open
-  `/home/listing/:id` with a Hero; tablet and desktop use a side panel.
-- Listing detail: receipt of facts, allergens, quantity stepper capped at
-  what is left, "Request food" (stand-in until Stage 3), food-safety note,
-  closed/fully-reserved wording.
-- Browse button: focuses the counter's search field from any page.
-- Donor Board: chalkboard "Today's Surplus" (soonest deadline first, tap a
-  line to edit) and a printed "Counter tally" receipt.
-- Post/edit form: bottom sheet on phones, dialog on wider screens; date and
-  time pickers, "Pickup in +1h/+2h/+4h" shortcuts, client checks that mirror
-  the server, server field errors shown under the matching field.
-- Listings page (donor) / All listings (admin): Open and Closed tabs, Edit,
-  Delete with confirmation. Delete is hidden when portions are reserved.
-- New widgets: `FilterTag`, `QuantityStepper`, `FadeUp`; `TokenCard` gained
-  a `selected` state. `core/format.dart` holds date/quantity formatting.
+- `ClaimRequest` / `ClaimPickup` models, `ClaimService`, `ClaimsProvider`
+  (reset on sign-out). `ListingsProvider` gained `replace` and `byId`;
+  `Fmt.ago` added.
+- Listing detail: quantity stepper, optional note ("Note for the canteen"),
+  "Request 3 kg" button with loading state; a server quantity error shows in
+  red under the stepper. With an open request it shows "You asked for ...",
+  the stamp, a one-line next step, "See my requests" and "Cancel request".
+- Donor Board: the **Requests** queue (`screens/donor/request_queue.dart`),
+  with "N WAITING" beside the heading, a slip per request (who, organisation,
+  how long ago, amount in mono, token number and portions left, note), and
+  Approve / Turn down. Approve is disabled with a turmeric explanation when
+  too little is left or pickup has closed. Turn down asks for confirmation.
+  Decided slips stay in place this visit; older ones are listed under
+  "Decided earlier" (up to four). On wide content (900px or more) the queue is
+  in the right column above the tally; otherwise it sits right under the board.
+- `StampDrop` widget: APPROVED lands from scale 1.9, invisible and turned an
+  extra -10°, to rest in 420ms on `stampCurve`, with the ink fully visible
+  after the first third and a light haptic at impact. Reduced motion shows the
+  final stamp at once. Used only on approval; a turned-down stamp just fades
+  in over 200ms.
+- My requests (`/requests`): Active / Past tags, one `ReceiptTimeline` per
+  request that prints only the steps the request can still reach, the stamp
+  for the furthest step reached (PENDING, APPROVED, ASSIGNED, PICKED UP,
+  DELIVERED, REJECTED, CANCELLED), a one-line next step, and Cancel where the
+  server allows it. One column under 620px of content, otherwise two
+  staggered columns. Empty states for both tags. Fade-up on first load only.
 
-## Verified in Stage 2
+## Verified in Stage 3
 
-- API: 22 curl checks (filters, regex-safe search, pending/no-token/wrong-role
-  blocks, empty-body field errors, the three date rules, quantity below
-  reserved, editing an expired listing, delete with approved claims, bad id,
-  admin edit, delete then 404, ignored `status`/`reservedQuantity`). The
-  seeded Samosa (deadline +12 min) was confirmed `expired` after its deadline.
+- API: 32 checks in a Node script against a second server on port 5050, all
+  passing. They cover: incoming order and population; wrong-role, pending and
+  no-token blocks; empty-body field errors; duplicate open request (409);
+  asking above available; re-request after rejection; approve 6 of 12 then 8
+  refused with the claim rolled back to pending; approve twice; reject an
+  approved claim; **two approvals fired in parallel on a 5-portion listing
+  (3 + 3): exactly one 200, reserved = 3**; fully_reserved; release on cancel;
+  other recipient / donor cannot cancel; cancel twice; pickup details in
+  `mine`; cancel with an assigned pickup cancels the pickup; cancel after
+  pick-up refused; approve and request on an expired listing; bad and unknown
+  ids; notifications written.
 - Playwright screenshots of the release build at 360, 768 and 1440 in paper
-  and chalkboard: welcome, counter feed, detail page (360) and side panel
-  (768/1440), donor board, donor listings, admin all listings, post form.
-- Clicked through: welcome slides → sign in; feed → detail (phone); Veg tag;
-  Browse from Profile (desktop) and from the counter (phone) focuses search;
-  search with no match → "Clear filters"; empty form submit → inline errors;
-  post a token (#FL-0010, slip "is on the counter"); edit its quantity
-  (slip "updated"); delete it; delete blocked for a listing with approved
-  claims (slip shows the server reason).
+  and chalkboard: Board with the queue, My requests. Detail with the request
+  form and with "You asked for" at 360 in both themes. My requests two-column
+  at 1440 (light) and 768 (dark).
+- Clicked Approve on the Board (1440): the slip got APPROVED, "6 left", the
+  slip message, and Farhan's 8-packet slip switched to the turmeric warning
+  with Approve disabled.
+- The stamp drop was recorded with a CDP screencast: the stamp appears large,
+  faint and steeply turned, then settles at its normal size and angle within
+  about 400ms.
 - `flutter analyze`: no issues. `flutter build web` from `C:\FoodLoop\frontend`.
 
-Fixed during the screenshot pass:
-- Filter tags stretched to the full row width (a `Container` with an alignment
-  expands); they now hug their text.
-- The side panel repeated the selected token card; it now opens with a plain
-  heading, clock and portion meter.
-- The list column was too narrow at 768/1440 (portion icons wrapped); it now
-  takes 54% of the width, between 320 and 400px.
-- Chalkboard lines wrapped into three lines at 360 and "0/10 plates" was
-  ambiguous; each line now reads "12 left" with a one-line note underneath.
-- The tally receipt wrapped "Portions left" when placed beside the requests
-  note at 768; side-by-side now starts at 640px of content width.
-- Welcome: the logo jumped when Skip disappeared; "Next" had a leading arrow;
-  the APPROVED stamp wrapped on the wide layout.
-
-Fixed from `/impeccable critique` (design review; native platform, so no
-detector run):
-- Form fields were announced only by their hint text; `LabeledField` now
-  gives each field its label (also fixes login and register).
-- Two "Post food" buttons on wide screens (board/listings header plus the
-  sidebar); the shell's button is now the only one.
-- Left for Stage 5 polish: a receipt title can leave one word on its own line
-  ("Counter 2" → "2").
+From `/impeccable critique` (in the conversation, Flutter canvas so no
+detector):
+- P2: at 1440 the Board stacks the queue under the board rather than in the
+  right column the user chose (see assumptions).
+- P3 (left for Stage 5): counter cards do not show that the recipient has
+  already requested a token; only the detail page does.
 
 ## Known issues / not verified
 
-- **The Hero flight was not seen frame by frame.** Navigation from card to
-  detail works on a phone width; the animation itself was not recorded.
-- **Playwright canvas clicks stop working after resizing the window in
-  place**; a fresh navigation fixes it. Typing into fields after a reload also
-  failed once, so the later checks signed in through the API (as the app
-  does) instead of typing. Login by typing was checked at the start.
-- The date and time pickers use Material's dialogs, themed only through the
-  colour scheme. They were not screenshotted.
-- Not run on an Android emulator or device yet.
-- Stage 1 items still open: focus ring not seen in a screenshot, helper text
-  indent, Google Fonts need internet on first load, no Flutter tests.
+- **The user's own API on port 5000 was started before Stage 3 with
+  `node src/server.js` (no reload), so it has no `/api/claims` routes.**
+  It must be restarted. It was not stopped from here.
+- Not tried by hand: the reduced-motion path of the stamp drop, the haptic on
+  a real phone, the cancel dialog clicked in the browser (cancel was verified
+  through the API), and typing a note in the form.
+- The concurrency test fires two simultaneous HTTP requests; it is not a
+  load test.
+- Still open from earlier stages: the Hero flight not seen frame by frame,
+  the date pickers not screenshotted, no Android run yet, no Flutter tests,
+  Google Fonts need internet on first load.
 
 ## Assumptions made
 
-- **Only `available` listings are swept to `expired`.** A fully reserved
-  listing is already handed out and its pickups carry on; if a claim is later
-  cancelled it becomes `available` and the next sweep expires it.
-- **Expiry is a sweep before each read**, not a timer or cron job.
-- **Delete is refused with 409 Conflict** when approved claims exist; other
-  claims for the listing are deleted with it.
-- **Expired and completed listings cannot be edited.**
-- **`closingSoon` is a server-side filter** (deadline within one hour), added
-  next to the brief's `status`, `foodType` and `search` filters.
-- **`GET /api/impact` is a new public endpoint** so the welcome screen's
-  ImpactNumber shows a real figure before login (brief: "large ImpactNumber"
-  on desktop onboarding; PRODUCT.md: never invented numbers).
-- **The counter shows `available` and `fully_reserved` listings** (the latter
-  stamped RESERVED); expired and completed are hidden from recipients.
-- **Tablet and desktop both use the list + side panel**; only phones open a
-  separate detail page with the Hero.
-- **The listing detail route is recipient-only** (`/home/listing/:id`).
-- **"Request food" shows a NOTE slip** until the claim workflow in Stage 3.
-- **The welcome slides show once per device** and are skipped after any
-  sign-in. The split layout starts at 900px, the same as sign in.
-- **The admin's Listings page lists every listing** with Edit and Delete; the
-  full "listing review" belongs to the Stage 4 admin dashboard.
-- **impeccable `shape`** was written as a short brief in the chat and the
-  build went ahead without a separate confirmation stop, because the user
-  asked for the whole stage before stopping.
-- **impeccable `critique`** ends by asking which findings to fix. As in
-  Stage 1, the P1/P2 findings were fixed without asking.
-- `.playwright-mcp/` (screenshots and helper scripts) is git-ignored.
+- **Approval is two atomic steps with a manual undo**, because a single local
+  MongoDB (not a replica set) has no multi-document transactions.
+- **Requests above what is left are refused when they are sent**, as well as at
+  approval. The brief only requires the approval check; the early check gives
+  clearer feedback.
+- **Approve is disabled in the UI when it cannot succeed**; the server still
+  enforces the rule (shown by the API tests). The visible demo of the guard is
+  the disabled button with its reason.
+- **Cancel is allowed until the volunteer picks the food up** (user's choice);
+  an `assigned` pickup is cancelled with the request.
+- **Turning a request down asks for confirmation**, because it cannot be undone.
+  Approving does not, because the stamp moment should follow the tap directly.
+- **The donor is not notified when a recipient cancels**; rule 8 does not list
+  it.
+- **Notification messages are stored now; the Alerts screen is Stage 4.**
+- **Board layout at 1440:** the user chose "right column", but the sidebar and
+  the activity rail leave about 690px for the Board, and a right column there
+  would squeeze the chalkboard to phone width. The queue goes to the right
+  column at 900px of content (wider screens) and sits straight under the
+  board below that, where its first request is still above the fold.
+- **The receipt's footer is the canteen's name**; the pickup place is in the
+  next-step line under the receipt.
+- **The note is limited to 200 characters** and is optional.
+- **"Active"** means pending, or approved and not yet delivered; **"Past"**
+  means delivered, turned down or cancelled.
 
 ## Exact next step to resume
 
-Wait for "continue", then start **Stage 3 — Claim workflow** (`PROMPT.md` Part J):
+Wait for "continue", then start **Stage 4 — Volunteers, notifications,
+dashboards** (`PROMPT.md` Part J):
 
-1. Run `/impeccable shape` for the request flow, the donor's incoming
-   requests and "My requests".
-2. Backend: `/api/claims` (create, mine, incoming, approve, reject, cancel)
-   with the atomic `findOneAndUpdate` (`$expr` + `$inc`) reservation,
-   transition checks, the no-duplicate rule, and claim notifications.
-3. Frontend: wire "Request food" in `screens/recipient/listing_detail.dart`;
-   replace the "Incoming requests" note in `screens/donor/board_screen.dart`;
-   the APPROVED stamp-drop animation; My Requests with ReceiptTimeline
-   (replace the `/requests` stand-in in `core/router/app_router.dart`).
-4. Screenshot at 360, 768 and 1440 in both themes, then `/impeccable critique`.
+1. `/impeccable shape` for the volunteer dashboard, Alerts, admin overview and
+   approvals.
+2. Backend: `POST /api/pickups/assign` (admin, approved claims only),
+   `GET /api/pickups/mine`, `PATCH /api/pickups/:id/status` using
+   `assertPickupTransition`; mark the listing `completed` when every reserved
+   portion is delivered; `volunteer_assigned` / `delivered` / `account_approved`
+   notifications; `/api/notifications` (list, read, read-all); `/api/users`
+   (pending list, verify); `/api/dashboard`; `/api/activity`.
+3. Frontend: volunteer home (tabs Assigned / On the way / Delivered), Alerts
+   with the bell badge, admin overview (ImpactNumber block, 7-day chart),
+   approvals (table on desktop, cards on phones), volunteer assignment dialog,
+   activity rail feed that stops polling when the tab is hidden. Replace the
+   remaining `ComingSoonScreen` stand-ins.
+4. Screenshots at 360, 768 and 1440 in both themes, then `/impeccable critique`.

@@ -10,10 +10,12 @@ import 'core/api/token_store.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/claims_provider.dart';
 import 'providers/feed_provider.dart';
 import 'providers/listings_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/auth_service.dart';
+import 'services/claim_service.dart';
 import 'services/food_service.dart';
 
 void main() {
@@ -26,6 +28,7 @@ void main() {
   final foods = FoodService(api);
   final feed = FeedProvider(foods);
   final listings = ListingsProvider(foods);
+  final claims = ClaimsProvider(ClaimService(api));
 
   // On sign-out, forget the previous user's lists so the next user never
   // sees them, even for a moment.
@@ -33,6 +36,7 @@ void main() {
     if (auth.status == AuthStatus.signedOut) {
       feed.reset();
       listings.reset();
+      claims.reset();
     }
   });
 
@@ -40,7 +44,15 @@ void main() {
   theme.load();
   auth.restore();
 
-  runApp(FoodLoopApp(api: api, auth: auth, theme: theme, foods: foods, feed: feed, listings: listings));
+  runApp(FoodLoopApp(
+    api: api,
+    auth: auth,
+    theme: theme,
+    foods: foods,
+    feed: feed,
+    listings: listings,
+    claims: claims,
+  ));
 }
 
 class FoodLoopApp extends StatefulWidget {
@@ -52,6 +64,7 @@ class FoodLoopApp extends StatefulWidget {
     required this.foods,
     required this.feed,
     required this.listings,
+    required this.claims,
   });
 
   final ApiClient api;
@@ -60,6 +73,7 @@ class FoodLoopApp extends StatefulWidget {
   final FoodService foods;
   final FeedProvider feed;
   final ListingsProvider listings;
+  final ClaimsProvider claims;
 
   @override
   State<FoodLoopApp> createState() => _FoodLoopAppState();
@@ -79,6 +93,7 @@ class _FoodLoopAppState extends State<FoodLoopApp> {
         ChangeNotifierProvider<ThemeProvider>.value(value: widget.theme),
         ChangeNotifierProvider<FeedProvider>.value(value: widget.feed),
         ChangeNotifierProvider<ListingsProvider>.value(value: widget.listings),
+        ChangeNotifierProvider<ClaimsProvider>.value(value: widget.claims),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, theme, _) => MaterialApp.router(

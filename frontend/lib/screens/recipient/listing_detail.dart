@@ -12,9 +12,13 @@ import '../../core/api/api_client.dart';
 import '../../core/format.dart';
 import '../../core/responsive/breakpoints.dart';
 import '../../core/theme/tokens.dart';
+import '../../models/claim_request.dart';
 import '../../models/food_listing.dart';
+import '../../providers/claims_provider.dart';
 import '../../providers/feed_provider.dart';
 import '../../services/food_service.dart';
+import '../auth/auth_layout.dart' show LabeledField;
+import 'my_requests_screen.dart' show confirmCancel;
 import '../../widgets/deadline_clock.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/fl_button.dart';
@@ -42,18 +46,90 @@ class ListingDetailView extends StatefulWidget {
 
 class _ListingDetailViewState extends State<ListingDetailView> {
   int _quantity = 1;
+  final _note = TextEditingController();
+  bool _sending = false;
+  String? _quantityError; // the server's reason, shown under the stepper
+
+  @override
+  void initState() {
+    super.initState();
+    // The recipient's own requests tell us whether they already asked for
+    // this token. Load them once if nothing has loaded them yet.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final claims = context.read<ClaimsProvider>();
+      if (claims.items == null && !claims.loading) claims.load(incoming: false);
+    });
+  }
 
   @override
   void didUpdateWidget(ListingDetailView old) {
     super.didUpdateWidget(old);
-    // A different token was picked in the side panel: start the count again.
-    if (old.listing.id != widget.listing.id) _quantity = 1;
+    // A different token was picked in the side panel: start again.
+    if (old.listing.id != widget.listing.id) {
+      _quantity = 1;
+      _quantityError = null;
+      _note.clear();
+    }
+  }
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  Future<void> _request(FoodListing l, int qty) async {
+    setState(() {
+      _sending = true;
+      _quantityError = null;
+    });
+    try {
+      final result = await context.read<ClaimsProvider>().request(l.id, qty, _note.text.trim());
+      _note.clear();
+      if (mounted) showSlip(context, result.message);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      final field = e.fieldErrors['requestedQuantity'];
+      if (field != null) {
+        setState(() => _quantityError = field);
+      } else {
+        showSlip(context, e.message, error: true);
+      }
+      // The listing may have changed (someone else's request was approved).
+      _refreshListing(l.id);
+    }
+    if (mounted) setState(() => _sending = false);
+  }
+
+  Future<void> _cancel(ClaimRequest claim) async {
+    final confirmed = await confirmCancel(context, claim);
+    if (!confirmed || !mounted) return;
+    try {
+      final result = await context.read<ClaimsProvider>().cancel(claim.id);
+      if (!mounted) return;
+      showSlip(context, result.message);
+      // Cancelling an approved request puts portions back on the counter.
+      context.read<FeedProvider>().replace(result.claim.listing);
+    } on ApiException catch (e) {
+      if (mounted) showSlip(context, e.message, error: true);
+    }
+  }
+
+  Future<void> _refreshListing(String id) async {
+    try {
+      final fresh = await context.read<FoodService>().get(id);
+      if (mounted) context.read<FeedProvider>().replace(fresh);
+    } on ApiException {
+      // Keep what is on screen; the feed refreshes on its next load.
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l = widget.listing;
     final qty = _quantity.clamp(1, l.available < 1 ? 1 : l.available);
+    final open = context.watch<ClaimsProvider>().openFor(l.id);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,36 +182,58 @@ class _ListingDetailViewState extends State<ListingDetailView> {
         ),
         const SizedBox(height: FlSpace.xl),
 
-        // The request area. Its wording follows the listing's state.
-        if (l.canRequest) ...[
+        // The request area. It follows the state of the listing and of the
+        // recipient's own request:
+        //   already asked (pending/approved) -> "You asked for ..." (rule 7)
+        //   portions left                    -> stepper, note, Request food
+        //   nothing left / closed            -> why not, in plain words
+        if (open != null)
+          _YourRequest(claim: open, onCancel: () => _cancel(open))
+        else if (l.canRequest) ...[
           Text('How much do you need?', style: context.text.titleLarge),
           const SizedBox(height: FlSpace.md),
-          Wrap(
-            spacing: FlSpace.lg,
-            runSpacing: FlSpace.md,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              QuantityStepper(
-                value: qty,
-                max: l.available,
-                unit: l.unit,
-                onChanged: (v) => setState(() => _quantity = v),
-              ),
-              FlButton(
-                label: 'Request food',
-                icon: Icons.back_hand_outlined,
-                variant: FlButtonVariant.accent,
-                // Sending a request is the claim workflow, built in Stage 3.
-                onPressed: () => showSlip(
-                  context,
-                  'Requests open in Stage 3. You picked ${Fmt.quantity(qty, l.unit)}.',
-                  note: true,
-                ),
-              ),
-            ],
+          QuantityStepper(
+            value: qty,
+            max: l.available,
+            unit: l.unit,
+            onChanged: (v) => setState(() {
+              _quantity = v;
+              _quantityError = null;
+            }),
           ),
           const SizedBox(height: FlSpace.sm),
-          Text('Up to ${Fmt.quantity(l.available, l.unit)} left.', style: context.text.bodySmall),
+          // A server refusal about the amount is shown right here.
+          Text(
+            _quantityError ?? 'Up to ${Fmt.quantity(l.available, l.unit)} left.',
+            style: context.text.bodySmall?.copyWith(
+              color: _quantityError == null ? null : context.fl.chilliDeep,
+            ),
+          ),
+          const SizedBox(height: FlSpace.lg),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: LabeledField(
+              label: 'Note for the canteen',
+              optional: true,
+              child: TextField(
+                controller: _note,
+                maxLength: 200,
+                textInputAction: TextInputAction.done,
+                decoration: const InputDecoration(
+                  hintText: 'e.g. We can collect by 3 PM',
+                  counterText: '',
+                ),
+              ),
+            ),
+          ),
+          FlButton(
+            label: 'Request ${Fmt.quantity(qty, l.unit)}',
+            icon: Icons.back_hand_outlined,
+            variant: FlButtonVariant.accent,
+            loading: _sending,
+            loadingLabel: 'Sending',
+            onPressed: () => _request(l, qty),
+          ),
         ] else
           _ClosedNote(listing: l),
         const SizedBox(height: FlSpace.xl),
@@ -169,6 +267,67 @@ class _PanelHeading extends StatelessWidget {
           children: [
             if (l.isOpen) DeadlineClock(deadline: l.pickupDeadline) else StatusStamp(l.stamp),
             PortionMeter(total: l.quantity, reserved: l.reservedQuantity, unit: l.unit),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// The recipient already has an open request for this token (rule 7 allows
+/// only one), so the stepper is replaced by what they asked for.
+class _YourRequest extends StatelessWidget {
+  const _YourRequest({required this.claim, required this.onCancel});
+  final ClaimRequest claim;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final fl = context.fl;
+    final c = claim;
+    final body = switch (c.stamp) {
+      StampKind.pending => 'Waiting for the canteen to decide. You will see the answer in My requests.',
+      StampKind.approved => 'Reserved for you. An admin will assign a volunteer to bring it over.',
+      StampKind.assigned => '${c.pickup!.volunteerName} will collect it for you.',
+      StampKind.pickedUp => '${c.pickup!.volunteerName} has it and is on the way.',
+      _ => 'This request is on your receipts in My requests.',
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Flexible(
+              child: Text(
+                'You asked for ${Fmt.quantity(c.requestedQuantity, c.listing.unit)}',
+                style: context.text.titleLarge,
+              ),
+            ),
+            const SizedBox(width: FlSpace.lg),
+            StatusStamp(c.stamp),
+          ],
+        ),
+        const SizedBox(height: FlSpace.xs),
+        Text(body, style: context.text.bodyLarge?.copyWith(color: fl.inkSoft)),
+        const SizedBox(height: FlSpace.md),
+        Wrap(
+          spacing: FlSpace.sm,
+          runSpacing: FlSpace.sm,
+          children: [
+            FlButton(
+              label: 'See my requests',
+              variant: FlButtonVariant.outline,
+              onPressed: () => context.go('/requests'),
+            ),
+            if (c.canCancel)
+              TextButton.icon(
+                onPressed: onCancel,
+                style: TextButton.styleFrom(foregroundColor: fl.chilliDeep),
+                icon: const Icon(Icons.close, size: 20),
+                label: const Text('Cancel request'),
+              ),
           ],
         ),
       ],

@@ -23,6 +23,7 @@ import '../../screens/donor/listing_form.dart';
 import '../../screens/donor/manage_listings_screen.dart';
 import '../../screens/recipient/feed_screen.dart';
 import '../../screens/recipient/listing_detail.dart';
+import '../../screens/recipient/my_requests_screen.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/responsive_shell.dart';
 import '../theme/tokens.dart';
@@ -146,18 +147,7 @@ GoRouter buildRouter(AuthProvider auth) {
               ),
             ],
           ),
-          GoRoute(
-            path: '/requests',
-            pageBuilder: (_, s) => _fade(
-              s,
-              const ComingSoonScreen(
-                title: 'My requests',
-                heading: 'No receipts yet',
-                message: 'Each request you make will be kept here as a receipt. Built in Stage 3.',
-                art: EmptyArt.plate,
-              ),
-            ),
-          ),
+          GoRoute(path: '/requests', pageBuilder: (_, s) => _fade(s, const MyRequestsScreen())),
           GoRoute(
             path: '/listings',
             // Donors manage their own tokens; the admin sees every listing.

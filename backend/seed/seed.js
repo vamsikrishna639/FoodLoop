@@ -100,10 +100,13 @@ async function seed() {
   const cIdli = await C(idli, farhan, 40, 'approved', { note: 'Hostel breakfast.', decidedAt: hours(-23), createdAt: hours(-23.5) });
   const cBiryani = await C(biryani, ananya, 8, 'approved', { note: 'We can collect by 3 PM.', decidedAt: mins(-30), createdAt: mins(-40) });
   await C(biryani, farhan, 5, 'pending', { note: 'For 5 students staying back.' });
-  await C(sandwich, ananya, 6, 'pending', { note: '' });
+  await C(sandwich, ananya, 6, 'pending', { note: '', createdAt: mins(-12) });
+  // 6 + 8 = 14 but only 12 packets exist: approve one of these two and the
+  // other can no longer be approved (the over-allocation demo).
+  await C(sandwich, farhan, 8, 'pending', { note: 'Night study hall, about 8 of us.', createdAt: mins(-6) });
   const cThali = await C(thali, farhan, 10, 'approved', { note: 'Evening study group.', decidedAt: mins(-50), createdAt: mins(-60) });
   await C(dal, farhan, 3, 'rejected', { note: 'Need it by noon.', decidedAt: mins(-20), createdAt: mins(-30) });
-  await C(dal, ananya, 2, 'cancelled', { note: '' });
+  await C(dal, ananya, 2, 'cancelled', { note: '', createdAt: mins(-35), cancelledAt: mins(-25) });
 
   // ---- Pickups -------------------------------------------------------------
   await Pickup.create({ claimRequestId: cPulao._id, volunteerId: kiran._id, pickupStatus: 'delivered', assignedAt: hours(-47), pickedUpAt: hours(-46), deliveredAt: hours(-45) });
@@ -115,6 +118,7 @@ async function seed() {
   await Notification.insertMany([
     { userId: donor._id, type: 'claim_submitted', message: 'Farhan Sheikh requested 5 boxes of Chicken Biryani.' },
     { userId: donor._id, type: 'claim_submitted', message: 'Ananya Rao requested 6 packets of Veg Grilled Sandwiches.' },
+    { userId: donor._id, type: 'claim_submitted', message: 'Farhan Sheikh requested 8 packets of Veg Grilled Sandwiches.' },
     { userId: ananya._id, type: 'claim_approved', message: 'Your request for 8 boxes of Chicken Biryani was approved.' },
     { userId: ananya._id, type: 'volunteer_assigned', message: 'Kiran Kumar will collect your Chicken Biryani.' },
     { userId: farhan._id, type: 'claim_rejected', message: 'Your request for Dal Tadka and Jeera Rice was not approved.' },
