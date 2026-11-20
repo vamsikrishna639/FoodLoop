@@ -59,7 +59,7 @@ Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `
 ## How the user wants work done
 
 - Build in the five stages of the React rewrite (listed in `PROGRESS.md`). Stop after each stage and wait for the user to test it.
-- Commit at the end of each stage (e.g. `React Stage 1: setup, design tokens, gallery, auth and routing`). **Do not push** unless the user asks (changed for the React rewrite). Never force-push.
+- Commit at the end of each stage (e.g. `React Stage 1: setup, design tokens, gallery, auth and routing`), then **commit and push to origin (`https://github.com/vamsikrishna639/FoodLoop`) after every completed stage, never use `--force`, and check for secrets before each push**: `git ls-files` shows no `.env` (only `.env.example`), and no real `JWT_SECRET` or database password is in a tracked file or in the commits being pushed. If origin has commits the local branch lacks, ask before merging.
 - Before every commit, update `CLAUDE.md`, `README.md`, `PROGRESS.md` (and `VALIDATION.md` when a form changes) so they match the code, and commit them together with the work. Do not commit `VIVA_NOTES.md` (the user's own file) unless asked.
 - The Impeccable design hook is installed (`.impeccable/config.json`, committed; `config.local.json` and `.claude/settings.local.json` are git-ignored). It scans each edited UI file and reports deterministic design issues; act on them. Do not run `npx impeccable update` unless the user asks.
 - Each `impeccable shape` round may ask one short question; the user answers it and expects the stage to continue without another stop.

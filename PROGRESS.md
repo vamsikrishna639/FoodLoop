@@ -5,14 +5,14 @@ Updated on 2026-11-20 at the end of React Stage 2.
 ## Current stage
 
 The frontend is being rebuilt in **React (Vite, JavaScript)** against the
-existing, unchanged backend. **Stages 1 and 2 of 5 are complete and committed
-(not pushed).** Stage 1 was tested and approved by the user. Waiting for the
-user to test Stage 2.
+existing, unchanged backend. **Stages 1 and 2 of 5 are complete, committed
+and pushed to origin.** Both were tested and approved by the user. Each
+stage is now pushed when it is committed (after a secret check).
 
 | Stage | Contents | Status |
 |---|---|---|
 | 1 | Setup, design tokens, component gallery, auth + routing, responsive shell | Done, approved |
-| 2 | Food listings: recipient counter + detail, donor board, post / edit / delete, Listings | Done |
+| 2 | Food listings: recipient counter + detail, donor board, post / edit / delete, Listings | Done, approved |
 | 3 | Claims: request form, approve with stamp drop, turn down, cancel, My requests receipts | Next |
 | 4 | Volunteer pickups, alerts + badge, live activity refresh, dashboards + Recharts chart, admin approvals and assign dialog | Planned |
 | 5 | `/impeccable audit` + `polish`, `review-animations`, screenshots, VALIDATION.md complete, README | Planned |
