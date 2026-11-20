@@ -18,6 +18,7 @@ import Welcome from './pages/common/Welcome';
 import Board from './pages/donor/Board';
 import ManageListings from './pages/donor/ManageListings';
 import Counter from './pages/recipient/Counter';
+import MyRequests from './pages/recipient/MyRequests';
 import { PendingOnly, PublicOnly, RequireApproved } from './routes/Gate';
 
 /** Home differs per role. (Each is replaced by its real page in its stage.) */
@@ -64,10 +65,7 @@ export const router = createBrowserRouter([
           // /home/* so the recipient's counter stays mounted while the URL
           // moves between /home and /home/listing/:id (Counter reads the rest).
           { path: '/home/*', element: <HomeForRole /> },
-          {
-            path: '/requests',
-            element: <Placeholder title="My requests" stage={3} note="Every request printed as a receipt." />,
-          },
+          { path: '/requests', element: <MyRequests /> },
           { path: '/listings', element: <ManageListings /> },
           {
             path: '/approvals',

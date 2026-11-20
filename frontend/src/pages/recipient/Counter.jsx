@@ -19,6 +19,7 @@ import FilterTag from '../../components/FilterTag';
 import SkeletonToken from '../../components/SkeletonToken';
 import TokenCard from '../../components/TokenCard';
 import VegMarker, { FOOD_TYPES } from '../../components/VegMarker';
+import useClaims from '../../hooks/useClaims';
 import useFeed from '../../hooks/useFeed';
 import useMediaQuery from '../../hooks/useMediaQuery';
 import { DURATION, EASE } from '../../lib/motion';
@@ -27,6 +28,8 @@ import { ListingDetailView, ListingPage } from './ListingDetail';
 
 export default function Counter() {
   const feed = useFeed();
+  // The recipient's own requests: the detail shows "You asked for ..." from these.
+  const claims = useClaims();
   const wide = useMediaQuery('(min-width: 600px)');
   const reduced = useReducedMotion();
   const navigate = useNavigate();
@@ -56,7 +59,7 @@ export default function Counter() {
   // Phone with a token open: its own page.
   if (!wide && openId) {
     const cached = items?.find((l) => l.id === openId);
-    return <ListingPage key={openId} id={openId} cached={cached} onFresh={feed.replace} />;
+    return <ListingPage key={openId} id={openId} cached={cached} onFresh={feed.replace} claims={claims} />;
   }
 
   function open(listing) {
@@ -85,6 +88,7 @@ export default function Counter() {
                 onOpen={() => open(l)}
                 selected={wide && selected?.id === l.id}
                 transitionName={wide ? undefined : `token-${l.id}`}
+                headingLevel={2}
               />
             </FadeUp>
           </li>
@@ -112,7 +116,7 @@ export default function Counter() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: DURATION.fast, ease: EASE.out }}
               >
-                <ListingDetailView listing={selected} inPanel />
+                <ListingDetailView listing={selected} inPanel claims={claims} onListingChange={feed.replace} />
               </motion.div>
             </div>
           </div>

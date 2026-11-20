@@ -20,7 +20,7 @@ Read these before working:
 - `VALIDATION.md`: every form, its rules and the file that holds them.
 - `PRODUCT.md`: product context used by the `impeccable` skill.
 
-**Current stage:** React rewrite, Stages 1 and 2 of 5 done (setup, auth, routing; food listings). Next is Stage 3 (claims).
+**Current stage:** React rewrite, Stages 1 to 3 of 5 done (setup, auth, routing; food listings; claims). Next is Stage 4 (volunteers, notifications, dashboards, admin).
 
 ## Commands
 
@@ -97,6 +97,9 @@ Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `
 - Pages that later stages build are `Placeholder` ("Built in Stage N"); replace each with the real page in its stage.
 - The home route is `/home/*`. `HomeForRole` picks the page; the recipient's `Counter` (`pages/recipient/Counter.jsx`) reads the rest of the path (`listing/<id>`), so it stays mounted while the URL moves between the list and a token and keeps its list and filters (`hooks/useFeed.js`). Below 600px an open token is its own page (`ListingPage`, the card flies there with `viewTransition` and `view-transition-name: token-<id>`); from 600px it is the side panel, and selecting replaces the URL. The shell's page fade is keyed by the first path segment, so `/home` and `/home/listing/x` are one page.
 - Donor pages (`pages/donor/`): `Board` (chalkboard + tally; the tally moves beside the board only when its container is at least 900px wide, an `@container` query), `ManageListings` (also the admin's "All listings"), and `ListingForm` (post and edit). Listing data comes from `hooks/useListings.js` (`upsert`, `removeById` after a save or delete). Facts about a listing (`available`, `isOpen`, `isClosingSoon`, `stampOf`, `donorName`) are in `lib/listing.js`.
+- Claims (Stage 3): `api/claims.js`, `lib/claim.js` (facts about a request: `isOpenRequest`, `isActive`, `canCancel`, `claimStamp` (APPROVED moves on to the pickup's status), `nextStep`), `hooks/useClaims.js` (`useClaims()` = `/claims/mine`, `useClaims({ incoming: true })` = the donor's queue; `upsert`, `openFor(listingId)`). The recipient's request area is `pages/recipient/RequestFood.jsx` inside `ListingDetailView` (the Counter owns one `useClaims()` and passes it down); `CancelRequest.jsx` is the shared confirm. The donor's queue is `pages/donor/RequestQueue.jsx` on the Board (under the chalkboard, then the tally); it plays `StampDrop` only for `dropId` and keeps slips decided this visit in place. My requests is `pages/recipient/MyRequests.jsx` (one list; two columns by `@container`, every second item lowered with a transform).
+- After an action replaces the focused control (Approve, a sent or cancelled request), focus moves to the new text with `hooks/useFocusWhen.js` (`tabIndex={-1}` on the target). It waits one tick, because a page behind an open `<dialog>` is inert.
+- Heading levels follow the page outline: `TokenCard` and `ReceiptTimeline` take `headingLevel` (h2 in lists under the page h1; the phone detail page makes the token its h1).
 - `components/Modal.jsx` wraps the native `<dialog>` (focus trap, Escape, inert page): a bottom sheet under 600px, a dialog above, entrance via `@starting-style` in `styles/index.css` (`.modal`). `closeOnBackdrop={false}` for forms. `components/FilterTag.jsx` has `FilterTag` (toggle button, `aria-pressed`) and `ChoiceTags` (a radio group drawn as tags, for forms). `components/FadeUp.jsx` is the first-load stagger.
 - `api/client.js` returns the response's `data` plus the server's `message` (`{ ...data, message }`), so a page can show "Token #FL-0042 is on the counter" in a slip.
 - The shell moves focus to `#main` after navigation only if the page has not already put focus inside it (Browse focuses the search box).

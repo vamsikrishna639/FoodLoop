@@ -21,7 +21,18 @@ import VegMarker from './VegMarker';
 
 // transitionName: a unique view-transition-name (e.g. "token-<id>") so the
 // card can fly to the same card on the detail page on phones.
-export default function TokenCard({ listing, stamp, onOpen, selected = false, transitionName, as: Tag = 'article' }) {
+// headingLevel: the title's level in the page outline (2 in a list under the
+// page's h1; 1 when the token is the page, on the phone detail page).
+export default function TokenCard({
+  listing,
+  stamp,
+  onOpen,
+  selected = false,
+  transitionName,
+  headingLevel = 3,
+  as: Tag = 'article',
+}) {
+  const Title = `h${headingLevel}`;
   const [hovered, setHovered] = useState(false);
   const muted = stamp === 'expired' || stamp === 'completed';
   const donorName = listing.donorName || donorNameOf(listing);
@@ -45,7 +56,9 @@ export default function TokenCard({ listing, stamp, onOpen, selected = false, tr
               <VegMarker type={listing.foodType} showLabel />
               <StatusStamp kind={stamp} />
             </div>
-            <h3 className={`mt-2 line-clamp-2 t-headline-sm ${muted ? 'text-ink-soft' : 'text-ink'}`}>{listing.title}</h3>
+            <Title className={`mt-2 line-clamp-2 t-headline-sm ${muted ? 'text-ink-soft' : 'text-ink'}`}>
+              {listing.title}
+            </Title>
             <p className="mt-0.5 truncate text-ink-soft t-body">{donorName}</p>
           </div>
         </div>

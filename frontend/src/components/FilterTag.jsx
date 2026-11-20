@@ -15,9 +15,11 @@ const PILL =
 const ON = 'border-ink bg-ink text-paper';
 const OFF = 'border-control bg-surface text-ink';
 
-export default function FilterTag({ label, selected, onClick, leading }) {
+// ref (React 19 passes it as a prop) lets a page move focus to a tag.
+export default function FilterTag({ label, selected, onClick, leading, ref }) {
   return (
     <button
+      ref={ref}
       type="button"
       aria-pressed={selected}
       onClick={onClick}

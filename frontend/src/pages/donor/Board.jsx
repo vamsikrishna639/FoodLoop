@@ -2,13 +2,15 @@
 // behind a canteen counter, with a printed tally of the counter.
 //
 //   Content 900px wide or more:  [ chalkboard (big) ] [ tally ]
-//   Narrower:                    chalkboard, then tally, stacked.
+//                                [ requests         ]
+//   Narrower:                    chalkboard, requests, then tally, stacked.
 //
 // The switch is a container query (@container), so it depends on the room
 // the page actually has, not the window: at 1440 the sidebar and activity
 // rail leave about 690px, so the tally stacks under the board there.
-// (The request queue joins the right column in Stage 3.)
-import { useEffect, useState } from 'react';
+// Requests come straight after the board: deciding them is the donor's job,
+// so they come before the figures.
+import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { dashboard } from '../../api/dashboard';
 import Chalkboard from '../../components/Chalkboard';
@@ -18,16 +20,19 @@ import PageFrame from '../../components/PageFrame';
 import ReceiptTimeline from '../../components/ReceiptTimeline';
 import { useAuth } from '../../context/AuthContext';
 import { useSlip } from '../../context/ToastContext';
+import useClaims from '../../hooks/useClaims';
 import useListings from '../../hooks/useListings';
 import { quantity, time } from '../../lib/format';
 import { available, isClosingSoon } from '../../lib/listing';
 import ListingForm from './ListingForm';
+import RequestQueue from './RequestQueue';
 
 const longDate = new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
 
 export default function Board() {
   const { user } = useAuth();
   const listings = useListings();
+  const claims = useClaims({ incoming: true });
   const showSlip = useSlip();
   const location = useLocation();
   const navigate = useNavigate();
@@ -57,20 +62,63 @@ export default function Board() {
 
   const title = user.organization || user.name;
 
+  // The Board's copy of a listing is updated after every approval, so the
+  // other slips in the queue show the right "left" count.
+  const listingFor = useCallback((id) => listings.items?.find((l) => l.id === id), [listings.items]);
+  const waiting = claims.items?.filter((c) => c.status === 'pending').length;
+
+  // Scroll the queue's heading into view and move focus to it.
+  function goToRequests() {
+    const heading = document.getElementById('queue-title');
+    heading?.scrollIntoView({ block: 'start' });
+    heading?.focus({ preventScroll: true });
+  }
+
+  const reloadAll = () => {
+    listings.load();
+    claims.load();
+  };
+
   return (
     <PageFrame
       title={title}
       maxWidth="max-w-[1000px]"
-      caption="Post what is left after each service. Tap a line on the board to change it."
+      caption={
+        <>
+          Post what is left after each service. Tap a line on the board to change it.
+          {/* The queue sits under the board, so on a phone it starts below the
+              first screen. While someone is waiting, this jumps straight to it. */}
+          {waiting > 0 && (
+            <>
+              {' '}
+              <button
+                type="button"
+                onClick={goToRequests}
+                className="inline-flex min-h-12 items-center font-semibold text-ink underline underline-offset-4 tablet:min-h-0"
+              >
+                {waiting === 1 ? '1 request is waiting' : `${waiting} requests are waiting`}
+              </button>
+            </>
+          )}
+        </>
+      }
     >
       {listings.items === null && listings.error ? (
         <ErrorState message={listings.error} onRetry={listings.load} />
       ) : (
         <div className="@container">
           <div className="grid items-start gap-8 @[900px]:grid-cols-[3fr_2fr] @[900px]:gap-6">
-            <SurplusBoard listings={listings} onEdit={(l) => setForm({ open: true, existing: l })} />
+            <div className="min-w-0 space-y-10">
+              <SurplusBoard listings={listings} onEdit={(l) => setForm({ open: true, existing: l })} />
+              <RequestQueue
+                claims={claims}
+                listingFor={listingFor}
+                onListingChange={listings.upsert}
+                onStale={reloadAll}
+              />
+            </div>
             {/* A receipt does not need the full width of a tablet. */}
-            <Tally listings={listings} figures={figures} />
+            <Tally listings={listings} figures={figures} waiting={waiting} />
           </div>
         </div>
       )}
@@ -154,7 +202,7 @@ function BoardLine({ listing: l, onEdit }) {
 }
 
 /** The printed tally of today's counter. */
-function Tally({ listings, figures }) {
+function Tally({ listings, figures, waiting }) {
   const loaded = listings.items !== null;
   const open = listings.open;
   const startOfToday = new Date();
@@ -173,6 +221,7 @@ function Tally({ listings, figures }) {
         { label: 'Portions left', value: n(open.reduce((sum, l) => sum + available(l), 0)) },
         { label: 'Reserved', value: n(open.reduce((sum, l) => sum + (l.reservedQuantity || 0), 0)) },
         { label: 'Closing < 1h', value: n(open.filter(isClosingSoon).length) },
+        { label: 'Requests waiting', value: waiting === undefined ? null : String(waiting) },
         { label: 'Posted today', value: n(postedToday) },
         // Rule 4: only portions a volunteer has handed over count as given.
         { label: 'Delivered, ever', value: figures ? String(figures.portionsDelivered) : null, emphasis: true },

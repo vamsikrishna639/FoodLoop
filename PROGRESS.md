@@ -1,20 +1,21 @@
 # FoodLoop — Progress
 
-Updated on 2026-11-20 at the end of React Stage 2.
+Updated on 2026-11-20 at the end of React Stage 3.
 
 ## Current stage
 
 The frontend is being rebuilt in **React (Vite, JavaScript)** against the
-existing, unchanged backend. **Stages 1 and 2 of 5 are complete, committed
-and pushed to origin.** Both were tested and approved by the user. Each
-stage is now pushed when it is committed (after a secret check).
+existing, unchanged backend. **Stages 1 to 3 of 5 are complete, committed
+and pushed to origin.** Stages 1 and 2 were tested and approved by the
+user; waiting for the user to test Stage 3. Each stage is pushed when it is
+committed (after a secret check).
 
 | Stage | Contents | Status |
 |---|---|---|
 | 1 | Setup, design tokens, component gallery, auth + routing, responsive shell | Done, approved |
 | 2 | Food listings: recipient counter + detail, donor board, post / edit / delete, Listings | Done, approved |
-| 3 | Claims: request form, approve with stamp drop, turn down, cancel, My requests receipts | Next |
-| 4 | Volunteer pickups, alerts + badge, live activity refresh, dashboards + Recharts chart, admin approvals and assign dialog | Planned |
+| 3 | Claims: request form, approve with stamp drop, turn down, cancel, My requests receipts | Done |
+| 4 | Volunteer pickups, alerts + badge, live activity refresh, dashboards + Recharts chart, admin approvals and assign dialog | Next |
 | 5 | `/impeccable audit` + `polish`, `review-animations`, screenshots, VALIDATION.md complete, README | Planned |
 
 The backend is complete (all five stages of the original build). It has not
@@ -30,6 +31,98 @@ hook was installed (`impeccable hooks on`: `.impeccable/config.json` is
 committed; the consent file and `.claude/settings.local.json` are
 git-ignored). Doctor now reports nothing. Impeccable was not updated (the
 user said not to).
+
+## Done in Stage 3
+
+`/impeccable shape` asked one question (where the queue goes on the Board);
+the user chose "right under the board", then the tally.
+
+- **Request food** (`pages/recipient/RequestFood.jsx`, in the listing
+  detail on the phone page and in the side panel): `QuantityStepper`
+  (`components/QuantityStepper.jsx`; minus / plus stop at 1 and at what is
+  left, the number can be typed), optional note, accent "Request 3 plates".
+  Rules in `validation/requestRules.js` (VALIDATION.md). Once asked (one
+  open request per token, from `/claims/mine`), the area shows "You asked
+  for ..." with the stamp, the next step, the pickup deadline, See my
+  requests and Cancel request. Server refusals: "Only 2 plates left" under
+  the quantity (and the listing is read again); 409 duplicate and 400 closed
+  as slips (and the requests are read again).
+- **Request queue** (`pages/donor/RequestQueue.jsx`, on the Board under the
+  chalkboard): "Requests · N waiting"; each request with who, how long ago,
+  the amount in mono, the dish, token and portions left, the note; Approve
+  and Turn down (asks first). Approve is not offered when the request asks
+  for more than is left or pickup closed; a turmeric note says why. The
+  APPROVED stamp drops (`StampDrop`) only on the slip just approved; slips
+  decided on this visit stay in place with their decision line; older ones
+  are compact lines under "Decided earlier" (4). Approve refusals (stale
+  board) show the server's sentence and re-read listings and requests. The
+  Board's caption says "3 requests are waiting" (a button that scrolls to
+  and focuses the queue) while any wait; the tally adds "Requests waiting".
+- **Cancel** (`pages/recipient/CancelRequest.jsx`): a confirmation dialog
+  used by the detail and by My requests.
+- **My requests** (`pages/recipient/MyRequests.jsx`, `/requests`): Active /
+  Past tags with counts; each request a ReceiptTimeline (asked for,
+  requested, approved / turned down / cancelled, pickup by, volunteer,
+  picked up, delivered), stamp (APPROVED moves on to ASSIGNED, PICKED UP,
+  DELIVERED from the pickup), next step, the note and Cancel. One list in
+  date order; from a 620px container two columns with every second receipt
+  lowered (`@container`, transform only).
+- **Shared:** `api/claims.js`, `lib/claim.js` (open, active, can cancel,
+  stamp, next step), `hooks/useClaims.js` (mine or incoming, `upsert`,
+  `openFor`), `hooks/useFocusWhen.js`.
+- **Critique fixes** (`/impeccable critique`, 28/40, the user chose "all
+  five plus the minor ones"): focus follows every action (decision line
+  after Approve / Turn down, "You asked for" after sending, the form heading
+  after cancelling, the Past tag after cancelling on My requests); the "N
+  waiting" link to the queue; receipts in reading order; heading levels
+  without gaps (TokenCard and ReceiptTimeline take a `headingLevel`; the
+  phone detail page has the token as its h1; lists use h2); stepper buttons
+  "Fewer plates" / "More plates" and the label "Number of plates"; Turn
+  down's confirm is chilli like the other irreversible confirms; "fewer than
+  this request asks for, so it can only be turned down" instead of "cannot
+  be approved in full"; no repeated canteen footer on receipts; the waiting
+  count no longer re-announces; more room between See my requests and
+  Cancel. One suggestion was declined: moving decided slips below the
+  waiting ones would carry the slip away during its stamp drop.
+- **Also fixed from screenshots:** the receipt reference broke mid-number
+  ("#FL-" / "0006"); "8 boxes ... goes back" grammar.
+
+## Verified in Stage 3
+
+Test API on 5050 with `foodloop_test` (reseeded before each run); Vite on
+**5175** (5173 and 5174 were both in use, left alone). The user's API and
+database were not touched.
+
+- `npm run build` succeeds; `impeccable detect` over `frontend/src`: no
+  findings.
+- Screenshots of the Board with the queue, the request form, "You asked
+  for", My requests (Active, Past), the turn-down and cancel dialogs, at
+  360 / 768 / 1440 in both themes: no horizontal overflow, no console
+  errors (except the browser logging the expected 400 answers).
+- Flows (Playwright script in the session scratchpad):
+  - Approve Ananya's 6 sandwiches: slip "Approved 6 packets of Veg Grilled
+    Sandwiches", APPROVED stamp drops on that slip only (sampled per frame:
+    scale 1.87 -> 0.96 -> 1, settled at about 450ms), focus on its decision
+    line; Farhan's 8 now says "Only 6 packets left, fewer than this request
+    asks for" with no Approve.
+  - Stale board: the biryani quantity lowered behind the page, Approve on
+    Farhan's 5: "Only 2 boxes left, but this request asks for 5 boxes",
+    the queue re-reads and shows the note.
+  - Turn down: dialog, "Request turned down", REJECTED stamp, focus on the
+    decision line.
+  - Request: 99 on blur shows "Only 25 plates left"; fixing it clears the
+    error at once; the listing shrunk behind the page, Request 3: the
+    server's "Only 2 plates left" appears under the quantity and the limit
+    becomes 2; Request 2: "Request sent for 2 plates of Samosa and Chutney",
+    the area becomes "You asked for 2 plates" (focused).
+  - 409: a request sent from another tab, then Request on the stale form:
+    "You already have a request for this token..." and the area switches to
+    "You asked for 1 kg".
+  - Cancel (approved, volunteer assigned) on My requests: dialog, "Request
+    cancelled. The portions are back on the counter", Active 3 / Past 4,
+    focus on the Past tag.
+  - Reduced motion: the approved stamp is at rest (no transform) while it
+    fades in.
 
 ## Done in Stage 2
 
@@ -177,7 +270,15 @@ fixed until the next blur (now re-checked on change while shown).
 - The JavaScript bundle is about 625 kB before gzip (Vite warns above 500 kB).
   Route-level code splitting can be added in Stage 5 if wanted.
 - The activity rail loads once per visit; the 20-second refresh arrives in
-  Stage 4.
+  Stage 4. The same goes for the donor's request queue and the
+  recipient's requests: they are read when the page opens and after each
+  action, not live (a new request appears on the Board after a reload or
+  a visit to another page and back, until Stage 4).
+- The 400 "Pickup for this token has closed" refusal on a request was not
+  staged in a browser (it needs a deadline to pass while the form is open);
+  it goes through the same slip path as the 409, which was checked.
+- At 360 a slip message can cover the button of the next request for its 4
+  to 6 seconds; it can be dismissed.
 - Going back from a token's page on a phone (the Counter link) starts the
   list at the top; the browser's own Back button restores the scroll.
 - The card-to-detail flight was checked to start (navigation with
@@ -188,6 +289,26 @@ fixed until the next blur (now re-checked on change while shown).
   replaced in Stage 5.
 - Restart nothing on the user's side: the test API on 5050 and the Vite server
   used for checks were stopped (see the final message of the stage).
+
+## Assumptions made (Stage 3)
+
+- **Queue order:** the board, then the requests, then the tally (the user's
+  answer in the shape round). Decided slips stay in place for the visit.
+- **Approve is hidden, not disabled,** when it cannot succeed (asks for
+  more than is left, or pickup closed), with a note saying why; the server
+  checks again either way. There is no partial approval (the backend has
+  none): such a request can only be turned down.
+- **Turn down and Cancel ask first;** Approve does not (it is the common,
+  wanted action, and the stamp is its confirmation).
+- **Active vs Past:** Active is approved-not-delivered, or pending on a
+  token still open; a pending request whose pickup closed before the
+  canteen decided is Past ("lapsed"), since nothing can happen to it.
+- **Cancel** is offered while the request is pending or approved and no
+  volunteer has collected the food (the server's rule).
+- **"Decided earlier"** shows the 4 most recent decisions; the full history
+  is not a page in the brief.
+- **The quantity starts at 1** and the note is optional, as the backend
+  allows.
 
 ## Assumptions made (Stage 2)
 
@@ -234,15 +355,13 @@ fixed until the next blur (now re-checked on change while shown).
 
 ## Exact next step to resume
 
-Stage 3 (claims): `/impeccable shape` for the request area and the donor's
-queue; add `src/api/claims.js`, `src/validation/requestRules.js` (1 up to
-the amount left, at most 1000; note at most 200), a QuantityStepper, the
-request form and "You asked for ..." area in `ListingDetailView` (one open
-request per token, from `/claims/mine`), the request queue on the Board
-with Approve (StampDrop on the one just approved, slips decided this visit
-stay in place) and Turn down, Cancel for recipients, and My requests
-(`/requests`) as ReceiptTimelines with Active / Past tabs. Replace the
-`/requests` placeholder.
+Wait for the user to test Stage 3. Then Stage 4: volunteer pickups (Assigned
+/ On the way / Delivered tabs, one large status button, pickup receipt),
+notifications page and bell badge, the single 20-second refresh (badge,
+activity rail, and the request lists; paused while the tab is hidden),
+dashboards with the Recharts 7-day chart, admin approvals and the assign
+dialog (`validation/assignRules.js`). Replace the remaining placeholders
+(volunteer and admin home, `/approvals`, `/notifications`).
 
 ## Final task (only when the user says the project is finished)
 

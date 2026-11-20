@@ -18,15 +18,27 @@ import StatusStamp from '../../components/StatusStamp';
 import TokenCard from '../../components/TokenCard';
 import { dayTime, quantity, time } from '../../lib/format';
 import { available, canRequest, donorName, isExpired, isOpen, stampOf } from '../../lib/listing';
+import RequestFood from './RequestFood';
 
-export function ListingDetailView({ listing: l, inPanel = false }) {
+// claims: the recipient's requests (useClaims), so the request area knows
+// whether this token was already asked for. onListingChange: called with a
+// fresher copy of the listing (after a cancel or a refusal).
+export function ListingDetailView({ listing: l, inPanel = false, claims, onListingChange }) {
+  // Page outline: on the phone page the token is the page's h1 and the
+  // sections are h2; in the side panel (under "Today's Counter") the token
+  // is an h2 and the sections are h3.
+  const level = inPanel ? 3 : 2;
+  const Section = `h${level}`;
+  const requestArea = (
+    <RequestFood listing={l} claims={claims} onListingChange={onListingChange} headingLevel={level} />
+  );
   return (
     <div>
       {inPanel ? (
         <PanelHeading listing={l} />
       ) : (
         // The same slip as in the list, so the eye keeps its place.
-        <TokenCard listing={l} stamp={stampOf(l)} transitionName={`token-${l.id}`} />
+        <TokenCard listing={l} stamp={stampOf(l)} transitionName={`token-${l.id}`} headingLevel={1} />
       )}
 
       {l.description && <p className="mt-6 max-w-[60ch] text-ink t-body-lg">{l.description}</p>}
@@ -36,6 +48,7 @@ export function ListingDetailView({ listing: l, inPanel = false }) {
         className="mt-6"
         title={l.location}
         heading="Collect from"
+        headingLevel={level}
         reference={`#${l.tokenNumber}`}
         entries={[
           { label: 'Prepared', value: dayTime(l.preparedAt) },
@@ -45,25 +58,18 @@ export function ListingDetailView({ listing: l, inPanel = false }) {
         ]}
       />
 
-      <h3 className="mt-6 t-title-lg text-ink">Allergens</h3>
+      <Section className="mt-6 t-title-lg text-ink">Allergens</Section>
       <p className="mt-1 text-ink t-body-lg">{l.allergenNotes || 'None declared by the canteen.'}</p>
 
-      {/* The request area. Asking for food is added in Stage 3; for now an
-          open token says so, and a closed one says why in plain words. */}
+      {/* The request area: the form, or the recipient's own request. A
+          token nobody can ask for says why in plain words (unless the
+          recipient's own request is shown instead). */}
       <div className="mt-6">
-        {canRequest(l) ? (
-          <div>
-            <h3 className="t-title-lg text-ink">How much do you need?</h3>
-            <p className="mt-1 text-ink-soft t-body-lg">
-              Up to {quantity(available(l), l.unit)} left. Asking for a share is added in Stage 3.
-            </p>
-          </div>
-        ) : (
-          <ClosedNote listing={l} />
-        )}
+        {requestArea}
+        {!canRequest(l) && !claims.openFor(l.id) && <ClosedNote listing={l} level={level} />}
       </div>
 
-      <SafetyNote />
+      <SafetyNote level={level} />
     </div>
   );
 }
@@ -85,7 +91,8 @@ function PanelHeading({ listing: l }) {
 }
 
 /** Why a token cannot be requested, in plain words. */
-function ClosedNote({ listing: l }) {
+function ClosedNote({ listing: l, level }) {
+  const Heading = `h${level}`;
   let title = 'Every portion is spoken for';
   let body = 'Approved requests have reserved all of it. If one is cancelled, it comes back here.';
   if (l.status === 'completed') {
@@ -97,19 +104,20 @@ function ClosedNote({ listing: l }) {
   }
   return (
     <div>
-      <h3 className="t-title-lg text-ink">{title}</h3>
+      <Heading className="t-title-lg text-ink">{title}</Heading>
       <p className="mt-1 text-ink-soft t-body-lg">{body}</p>
     </div>
   );
 }
 
 /** The food-safety reminder. A deadline alone does not make food safe. */
-function SafetyNote() {
+function SafetyNote({ level }) {
+  const Heading = `h${level}`;
   return (
     <aside aria-label="Food safety" className="mt-6 flex gap-3 rounded-control border border-line bg-sunken p-4">
       <FirstAidKitIcon size={22} aria-hidden="true" className="mt-0.5 shrink-0 text-ink" />
       <div>
-        <h3 className="t-title-md text-ink">Check before you serve</h3>
+        <Heading className="t-title-md text-ink">Check before you serve</Heading>
         <p className="mt-1 text-ink t-body">
           Look at and smell the food when you collect it, and read the allergens above. A pickup deadline is not a
           promise that food is safe to eat. If anything seems off, do not serve it.
@@ -123,7 +131,7 @@ function SafetyNote() {
 // Full page on phones: /home/listing/:id
 // ---------------------------------------------------------------------------
 
-export function ListingPage({ id, cached, onFresh }) {
+export function ListingPage({ id, cached, onFresh, claims }) {
   const reduced = useReducedMotion();
   // Show the copy already in the counter straight away (so the card has
   // something to land on), then fetch a fresh one.
@@ -143,7 +151,13 @@ export function ListingPage({ id, cached, onFresh }) {
   useEffect(load, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   let body;
-  if (listing) body = <ListingDetailView listing={listing} />;
+  // A fresher copy (after a cancel or a refusal) updates this page and the counter.
+  const changed = (fresh) => {
+    setListing(fresh);
+    onFresh?.(fresh);
+  };
+
+  if (listing) body = <ListingDetailView listing={listing} claims={claims} onListingChange={changed} />;
   else if (error) body = <ErrorState message={error} onRetry={load} />;
   else body = <SkeletonToken />;
 

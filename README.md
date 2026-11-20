@@ -25,8 +25,8 @@ The backend is complete. The React frontend is being built in five stages.
 |---|---|---|
 | 1 | Setup, design tokens, component gallery, sign in / register / waiting page, role-based routing, responsive shell | Done |
 | 2 | Food listings: recipient counter and detail, donor board, post / edit / delete | Done |
-| 3 | Claims: request, approve (stamp drop), turn down, cancel; My requests | Next |
-| 4 | Volunteer pickups, alerts, dashboards and chart, admin approvals and assignment | Planned |
+| 3 | Claims: request, approve (stamp drop), turn down, cancel; My requests | Done |
+| 4 | Volunteer pickups, alerts, dashboards and chart, admin approvals and assignment | Next |
 | 5 | Polish, audit, screenshots | Planned |
 
 What works in the browser today:
@@ -52,9 +52,23 @@ What works in the browser today:
   (`/home/listing/<id>`). The detail has the pickup receipt (place,
   prepared time, pickup by, posted, left), the allergens and the
   food-safety note. **Browse** puts the cursor in the search box.
-  (Asking for a share comes in Stage 3.)
+- **Recipient, requesting food:** under a token's details, a quantity
+  stepper (1 up to what is left), an optional note and **Request N plates**.
+  Once asked, the area shows "You asked for ..." with the request's stamp,
+  what happens next and **Cancel request** (asks first). The server's
+  refusals are shown in place ("Only 2 plates left" under the quantity; a
+  duplicate or a closed token as a slip).
+- **Recipient, My requests:** Active and Past tags; each request is a
+  printed receipt (asked for, requested, approved or turned down, pickup by,
+  volunteer, picked up, delivered) with a stamp, the next step and Cancel
+  while the food has not been collected. Two columns when there is room.
 - **Donor, Board:** the chalkboard "Today's Surplus" (one line per open
-  token, closing first; tap a line to edit it) and a printed counter tally.
+  token, closing first; tap a line to edit it), then **Requests**: each
+  waiting request with **Approve** (the APPROVED stamp drops onto that slip)
+  and **Turn down** (asks first). Approve is not offered when a request asks
+  for more than is left; a note says why. Decisions made on this visit stay
+  in place; older ones are listed under "Decided earlier". Then a printed
+  counter tally.
   **Post food** opens the form: a bottom sheet on phones, a dialog wider.
   Every field is checked as in VALIDATION.md; the +1 h / +2 h / +4 h buttons
   set the pickup time.
@@ -327,14 +341,17 @@ frontend/
     context/          AuthContext, ThemeContext, ToastContext (slip messages)
     routes/Gate.jsx   who may open which page (signed out, pending, role)
     hooks/            useValidatedForm (react-hook-form settings), useMediaQuery,
-                      useFeed (the counter's list and filters), useListings
+                      useFeed (the counter's list and filters), useListings,
+                      useClaims (requests), useFocusWhen
     validation/       the rules for each form, shared constants, server errors
-    lib/              motion tokens, formatting, roles and navigation, storage
+    lib/              motion tokens, formatting, roles and navigation, storage,
+                      facts about a listing (listing.js) and a request (claim.js)
     components/       TokenCard, StatusStamp, StampDrop, PortionMeter, DeadlineClock,
                       ReceiptTimeline, ImpactNumber, VegMarker, Chalkboard,
                       ResponsiveShell, ActivityRail, Field, Button and the rest
     pages/            auth (login, register, pending), common (welcome, profile,
-                      gallery), recipient (Counter, ListingDetail), donor (Board,
+                      gallery), recipient (Counter, ListingDetail, RequestFood,
+                      CancelRequest, MyRequests), donor (Board, RequestQueue,
                       ListingForm, ManageListings); volunteer and admin pages
                       arrive in Stage 4
     styles/index.css  the design tokens (CSS variables), Tailwind theme,

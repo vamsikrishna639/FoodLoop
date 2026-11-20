@@ -113,16 +113,54 @@ shown as a slip, and the Delete button is not offered for listings with
 reserved portions in the first place.
 
 ### Request food (Stage 3)
-File: `frontend/src/validation/requestRules.js` (added in Stage 3).
-Backend: `claimRoutes.js` `createRules` and `claimController.js` `create`.
+File: `frontend/src/validation/requestRules.js`, used by
+`frontend/src/pages/recipient/RequestFood.jsx` (the request area in a
+listing's details). Backend: `claimRoutes.js` `createRules` and
+`claimController.js` `create`.
 
-| Field | Rule |
-|---|---|
-| requestedQuantity | whole number from 1 up to the amount still available (and never above 1000) |
-| note | optional; at most 200 characters |
+The rules are a function, `requestRules({ left, unit })`, because the upper
+limit is how much of this listing is still free.
 
-Server-only checks shown to the user: "Only 3 boxes left", "You already have
-a request for this token", "Pickup for this token has closed".
+| Field | Rule | Message |
+|---|---|---|
+| requestedQuantity | whole number, at least 1 | "Ask for at least 1 plate" |
+| requestedQuantity | not more than what is left (and never above 1000, the server's limit) | "Only 25 plates left" |
+| note | optional; trimmed; at most 200 characters | "Keep the note under 200 characters" |
+
+Details:
+- The quantity is a `QuantityStepper` (`components/QuantityStepper.jsx`):
+  minus and plus buttons call `setValue(..., { shouldValidate: true })` and
+  stop at 1 and at the limit; the number can also be typed, and a typed
+  value past the limit is caught by the rule. It starts at 1.
+- The button names the amount ("Request 3 plates"), or says "Request food"
+  while the number is not valid.
+- The form is only offered when the token can be requested (open, portions
+  left) and the recipient has no pending or approved request for it (rule 7).
+  Otherwise the area shows "You asked for ..." with Cancel, or why the token
+  is closed.
+
+Server-only checks shown to the user:
+- 400 "Only 2 plates left" (someone else's request was approved meanwhile):
+  comes with a field error, so it is shown under the quantity; the listing
+  is read again, so the limit updates.
+- 409 "You already have a request for this token. Cancel it first to ask
+  again" (sent from another tab): a slip; the recipient's requests are read
+  again, so the area switches to "You asked for ...".
+- 400 "Pickup for this token has closed" / "This token has already been
+  handed out": a slip; the listing is read again and the area says why.
+
+### Approve, turn down, cancel (Stage 3)
+No form fields, but the server can refuse. Each refusal is a slip with the
+server's own sentence, and the page reads its data again:
+- Approve (donor, `pages/donor/RequestQueue.jsx`): 400 "Only 2 boxes left,
+  but this request asks for 5 boxes" (the atomic reservation failed), "This
+  request has already been decided", "Pickup for this token has closed, so
+  the request cannot be approved". Approve is not offered when the request
+  already asks for more than is left or pickup has closed; a note says why.
+- Turn down asks first ("Turn this request down?").
+- Cancel (recipient, `pages/recipient/CancelRequest.jsx`) asks first; 400
+  "The food has already been collected, so this request cannot be
+  cancelled", 403 "You can only cancel your own requests".
 
 ### Assign a volunteer (Stage 4)
 File: `frontend/src/validation/assignRules.js` (added in Stage 4).

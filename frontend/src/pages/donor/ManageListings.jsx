@@ -162,7 +162,7 @@ function ListingRow({ listing: l, onEdit, onDelete }) {
   const reserved = l.reservedQuantity || 0;
   return (
     <article>
-      <TokenCard as="div" listing={l} stamp={stampOf(l)} />
+      <TokenCard as="div" listing={l} stamp={stampOf(l)} headingLevel={2} />
       <div className="mt-1 flex flex-wrap gap-x-1">
         {/* Closed tokens are a record: they can be removed, not changed. */}
         {isOpen(l) && (
