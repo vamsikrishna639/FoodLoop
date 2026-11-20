@@ -1,0 +1,487 @@
+/*
+ * FoodLoop styles: the "Canteen Token" design system (see DESIGN.md).
+ *
+ * 1. Raw colour tokens for the two themes, as CSS variables.
+ *    Light = "paper" (default), dark = "chalkboard" (html[data-theme="dark"]).
+ *    This file is the only place in the app with hex colours.
+ * 2. @theme maps those variables to Tailwind names, so components write
+ *    `bg-paper`, `text-ink`, `font-mono`, `tablet:` and so on.
+ * 3. The type scale as utilities (`t-display-lg`, `t-mono-sm`, ...).
+ * 4. The paper shapes that need real CSS: token slip notches, perforation,
+ *    receipt zigzag, the chalkboard.
+ */
+@import 'tailwindcss';
+@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/instrument-sans';
+@import '@fontsource-variable/jetbrains-mono';
+
+/* `dark:` follows our toggle, not the operating system. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* ---------------------------------------------------------------------------
+ * 1. Colour tokens
+ * ------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  /* paper and ink */
+  --fl-paper: #f6f1e7; /* app background */
+  --fl-surface: #fbf8f2; /* slips, receipts, sheets */
+  --fl-sunken: #efe8da; /* stubs, input fills */
+  --fl-ink: #1e1b16; /* primary text */
+  --fl-ink-soft: #6b6255; /* secondary text */
+  --fl-line: #e3dacb; /* decorative dividers */
+  --fl-perforation: #cfc4b2; /* dotted lines */
+  --fl-control: #8c8272; /* input outlines (3:1) */
+
+  /* accents */
+  --fl-chilli: #d9472b; /* brand red: large display, rings, borders */
+  --fl-chilli-deep: #b93a21; /* red that is safe for text and button fills */
+  --fl-on-chilli: #fbf8f2;
+  --fl-leaf: #2f6b3f;
+  --fl-on-leaf: #fbf8f2;
+  --fl-turmeric: #e8a33d; /* highlight fill, never text on paper */
+  --fl-turmeric-deep: #8a5a0b; /* turmeric that is safe for text */
+  --fl-on-turmeric: #1e1b16;
+  --fl-stamp-grey: #6b6255;
+
+  /* Marks printed on the ink-coloured slip toast. The slip is dark on paper
+     and light on the chalkboard, so these use the other theme's accents to
+     stay above 4.5:1. */
+  --fl-slip-error: #f0674b;
+  --fl-slip-done: #e8a33d;
+
+  /* the chalkboard: dark in both themes */
+  --fl-board: #232927;
+  --fl-board-frame: #3a2e22;
+  --fl-chalk: #ece8df;
+  --fl-chalk-soft: #a9a397;
+  --fl-chalk-line: #3a423e;
+
+  /* shadows are ink, not blur-glow (DESIGN.md section 3) */
+  --fl-shadow-1: 0 4px 10px rgb(30 27 22 / 0.1);
+  --fl-shadow-2: 0 12px 32px rgb(30 27 22 / 0.14);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --fl-paper: #1f2422;
+  --fl-surface: #272d2a;
+  --fl-sunken: #1a1f1d;
+  --fl-ink: #ece8df;
+  --fl-ink-soft: #a9a397;
+  --fl-line: #3a423e;
+  --fl-perforation: #4b544f;
+  --fl-control: #7c857f;
+
+  --fl-chilli: #f0674b;
+  --fl-chilli-deep: #f0674b;
+  --fl-on-chilli: #1e1b16;
+  --fl-leaf: #6fbf83;
+  --fl-on-leaf: #1e1b16;
+  --fl-turmeric: #f2b65a;
+  --fl-turmeric-deep: #f2b65a;
+  --fl-stamp-grey: #8e958f;
+
+  --fl-slip-error: #b93a21;
+  --fl-slip-done: #8a5a0b;
+
+  --fl-shadow-1: 0 4px 10px rgb(0 0 0 / 0.28);
+  --fl-shadow-2: 0 12px 32px rgb(0 0 0 / 0.4);
+}
+
+/* ---------------------------------------------------------------------------
+ * 2. Tailwind theme
+ * ------------------------------------------------------------------------- */
+@theme inline {
+  /* Only our palette exists; Tailwind's default colours are removed so a
+     stray `bg-blue-500` cannot sneak in. */
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-paper: var(--fl-paper);
+  --color-surface: var(--fl-surface);
+  --color-sunken: var(--fl-sunken);
+  --color-ink: var(--fl-ink);
+  --color-ink-soft: var(--fl-ink-soft);
+  --color-line: var(--fl-line);
+  --color-perforation: var(--fl-perforation);
+  --color-control: var(--fl-control);
+  --color-chilli: var(--fl-chilli);
+  --color-chilli-deep: var(--fl-chilli-deep);
+  --color-on-chilli: var(--fl-on-chilli);
+  --color-leaf: var(--fl-leaf);
+  --color-on-leaf: var(--fl-on-leaf);
+  --color-turmeric: var(--fl-turmeric);
+  --color-turmeric-deep: var(--fl-turmeric-deep);
+  --color-on-turmeric: var(--fl-on-turmeric);
+  --color-stamp-grey: var(--fl-stamp-grey);
+  --color-slip-error: var(--fl-slip-error);
+  --color-slip-done: var(--fl-slip-done);
+  --color-board: var(--fl-board);
+  --color-board-frame: var(--fl-board-frame);
+  --color-chalk: var(--fl-chalk);
+  --color-chalk-soft: var(--fl-chalk-soft);
+  --color-chalk-line: var(--fl-chalk-line);
+
+  --font-display: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', serif;
+  --font-sans: 'Instrument Sans Variable', 'Instrument Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Breakpoints (mobile first): tablet from 600, auth split from 900,
+     desktop above 1024. Tailwind's own sm/md/lg are removed. */
+  --breakpoint-*: initial;
+  --breakpoint-tablet: 600px;
+  --breakpoint-split: 900px;
+  --breakpoint-desktop: 1025px;
+
+  /* Radii differ per object on purpose. */
+  --radius-sharp: 2px; /* receipts, chalkboard, table cells */
+  --radius-stamp: 4px; /* stamps, veg markers, mono chips */
+  --radius-control: 6px; /* buttons, inputs */
+  --radius-slip: 10px; /* token slips */
+  --radius-sheet: 20px; /* dialogs, sheet tops */
+  --radius-pill: 999px; /* filter tags, user chip */
+
+  --shadow-lifted: var(--fl-shadow-1);
+  --shadow-floating: var(--fl-shadow-2);
+
+  /* Motion. Mirrors src/lib/motion.js for CSS transitions. */
+  --ease-fl-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-fl-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* ---------------------------------------------------------------------------
+ * 3. Type scale (DESIGN.md section 2). Steep on purpose.
+ * ------------------------------------------------------------------------- */
+@utility t-impact {
+  font-family: var(--font-display);
+  font-size: clamp(4.5rem, 3.6rem + 3vw, 6rem); /* 72 phone -> 96 desktop */
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+@utility t-display-lg {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 2rem + 2vw, 3.5rem); /* up to 56 */
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.027em;
+  text-wrap: balance;
+}
+@utility t-display-md {
+  font-family: var(--font-display);
+  font-size: 2.75rem; /* 44 */
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.023em;
+  text-wrap: balance;
+}
+@utility t-display-sm {
+  font-family: var(--font-display);
+  font-size: 2.25rem; /* 36 */
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+}
+@utility t-headline-md {
+  font-family: var(--font-display);
+  font-size: 1.75rem; /* 28 */
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.018em;
+  text-wrap: balance;
+}
+@utility t-headline-sm {
+  font-family: var(--font-display);
+  font-size: 1.375rem; /* 22 */
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.014em;
+}
+@utility t-title-lg {
+  font-family: var(--font-display);
+  font-size: 1.1875rem; /* 19 */
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+@utility t-title-md {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+@utility t-title-sm {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.007em;
+}
+@utility t-body-lg {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+@utility t-body {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+@utility t-body-sm {
+  font-family: var(--font-sans);
+  font-size: 0.78125rem; /* 12.5 */
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: 0.008em;
+}
+@utility t-label-lg {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem; /* 15 */
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.007em;
+}
+@utility t-label-md {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem; /* 13 */
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.015em;
+}
+@utility t-label-sm {
+  font-family: var(--font-sans);
+  font-size: 0.78125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.024em;
+}
+/* Mono styles use tabular figures, so counters and times do not jiggle. */
+@utility t-mono-lg {
+  font-family: var(--font-mono);
+  font-size: 1.125rem; /* 18 */
+  font-weight: 700;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+@utility t-mono {
+  font-family: var(--font-mono);
+  font-size: 0.84375rem; /* 13.5 */
+  font-weight: 500;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+@utility t-mono-sm {
+  font-family: var(--font-mono);
+  font-size: 0.71875rem; /* 11.5 */
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+@utility t-stamp {
+  font-family: var(--font-mono);
+  font-size: 0.75rem; /* 12 */
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------------------
+ * Base: the parts of the browser we did not draw still follow the design.
+ * ------------------------------------------------------------------------- */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--fl-paper);
+    color: var(--fl-ink);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    caret-color: var(--fl-ink);
+    scrollbar-color: var(--fl-perforation) transparent;
+  }
+  ::selection {
+    background: var(--fl-turmeric);
+    color: var(--fl-on-turmeric);
+  }
+  /* A 2px ink ring with a 2px gap, never removed (DESIGN.md section 5). */
+  :focus-visible {
+    outline: 2px solid var(--fl-ink);
+    outline-offset: 2px;
+  }
+  /* On the always-dark board, the ring is chalk. */
+  .on-board :focus-visible {
+    outline-color: var(--fl-chalk);
+  }
+  a {
+    color: inherit;
+    text-underline-offset: 0.2em;
+  }
+  button,
+  [role='button'],
+  a,
+  label[for] {
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+  /* Chrome's autofill paints inputs pale blue; keep the paper slot instead. */
+  input:-webkit-autofill {
+    -webkit-text-fill-color: var(--fl-ink);
+    box-shadow: 0 0 0 100px var(--fl-sunken) inset;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * 4. Paper shapes
+ * ------------------------------------------------------------------------- */
+@layer components {
+  /*
+   * Token slip. Two layers:
+   *   .slip        draws the 1px outline (and hover lift) with drop-shadows,
+   *                which follow the shape of the child, notches included.
+   *   .slip-paper  is the paper itself, with a semicircle notch masked out
+   *                of each side, --stub above the bottom edge.
+   */
+  .slip {
+    --edge: var(--fl-line);
+    --stub: 5.25rem; /* 84px, grows with text size */
+    --notch: 9px;
+    filter: drop-shadow(1px 0 0 var(--edge)) drop-shadow(-1px 0 0 var(--edge))
+      drop-shadow(0 1px 0 var(--edge)) drop-shadow(0 -1px 0 var(--edge));
+  }
+  .slip-paper {
+    border-radius: var(--radius-slip);
+    background: var(--fl-surface);
+    -webkit-mask:
+      radial-gradient(circle var(--notch) at 0 calc(100% - var(--stub)), #0000 98%, #000) left / 51% 100%
+        no-repeat,
+      radial-gradient(circle var(--notch) at 100% calc(100% - var(--stub)), #0000 98%, #000) right / 51%
+        100% no-repeat;
+    mask:
+      radial-gradient(circle var(--notch) at 0 calc(100% - var(--stub)), #0000 98%, #000) left / 51% 100%
+        no-repeat,
+      radial-gradient(circle var(--notch) at 100% calc(100% - var(--stub)), #0000 98%, #000) right / 51%
+        100% no-repeat;
+  }
+
+  /* A row of round dots: perforations (3px) and receipt leaders (2px). */
+  .perforation {
+    height: 3px;
+    background: radial-gradient(circle, var(--dot, var(--fl-perforation)) 1.5px, #0000 1.6px) 0 50% / 8px
+      3px repeat-x;
+  }
+  .leader {
+    height: 2px;
+    background: radial-gradient(circle, var(--dot, var(--fl-perforation)) 1px, #0000 1.1px) 0 50% / 6px 2px
+      repeat-x;
+  }
+  /* A dashed rule printed across a receipt. */
+  .rule-dashed {
+    height: 1px;
+    background: linear-gradient(90deg, var(--dot, var(--fl-control)) 4px, #0000 0) 0 0 / 7px 1px repeat-x;
+  }
+
+  /*
+   * Receipt: straight sides, zigzag torn top and bottom edges (a conic
+   * gradient mask, one tooth per 12px tile). The outline comes from the
+   * parent .receipt-edge, like the token slip.
+   */
+  .receipt-edge {
+    --edge: var(--fl-line);
+    filter: drop-shadow(1px 0 0 var(--edge)) drop-shadow(-1px 0 0 var(--edge))
+      drop-shadow(0 1px 0 var(--edge)) drop-shadow(0 -1px 0 var(--edge));
+  }
+  .receipt {
+    --tooth: 12px;
+    background: var(--fl-surface);
+    -webkit-mask:
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--tooth) 51%
+        repeat-x,
+      conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / var(--tooth) 51% repeat-x;
+    mask:
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / var(--tooth) 51%
+        repeat-x,
+      conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / var(--tooth) 51% repeat-x;
+  }
+
+  /* The chalkboard: slate in a thin wooden frame. A faint chalk-dust
+     wash is the only gradient in the app (DESIGN.md section 3). */
+  .chalkboard {
+    background:
+      radial-gradient(120% 80% at 15% 0%, rgb(236 232 223 / 0.05), #0000 60%),
+      var(--fl-board);
+    border: 6px solid var(--fl-board-frame);
+    border-radius: var(--radius-sharp);
+    color: var(--fl-chalk);
+  }
+
+  /* A loading pulse for skeletons; off under reduced motion. */
+  .pulse {
+    animation: fl-pulse 1.1s ease-in-out infinite alternate;
+  }
+}
+
+/* Slip states as utilities, so variants work (`group-hover:slip-lifted`). */
+@utility slip-lifted {
+  /* Hovered or open: the slip leaves the table (elevation 1). */
+  filter: drop-shadow(1px 0 0 var(--edge)) drop-shadow(-1px 0 0 var(--edge)) drop-shadow(0 1px 0 var(--edge))
+    drop-shadow(0 -1px 0 var(--edge)) drop-shadow(0 4px 6px rgb(30 27 22 / 0.12));
+}
+@utility slip-selected {
+  /* A chosen slip (role picker): a heavier 2px ink edge. */
+  filter: drop-shadow(2px 0 0 var(--edge)) drop-shadow(-2px 0 0 var(--edge)) drop-shadow(0 2px 0 var(--edge))
+    drop-shadow(0 -2px 0 var(--edge));
+}
+
+/* On phones the bottom bar covers the last 68px; slips and pages lift above it. */
+@media (max-width: 599px) {
+  :root:has(.bottom-bar) {
+    --bottom-bar: 68px;
+  }
+}
+
+@keyframes fl-pulse {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Reduced motion means gentler, not none: transforms and loops stop,
+   short colour and opacity changes stay (capped at 120ms). */
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+  }
+  .press-scale:active {
+    transform: none !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}

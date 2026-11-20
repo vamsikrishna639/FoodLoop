@@ -6,12 +6,15 @@ a **token slip**, every status is a **stamp**, every history is a **receipt**, a
 the donor's posting area is a **chalkboard**.
 
 This document is the single source of truth for the UI. It is implemented in
-`frontend/lib/core/theme/`. Widgets never hard-code a colour, a text style or a
-duration; they read them from the theme.
+`frontend/src/styles/index.css` (CSS variables, the Tailwind `@theme`, the type
+utilities and the paper shapes) and `frontend/src/lib/motion.js` (motion
+tokens). Components never hard-code a colour, a font size or a duration; they
+use the Tailwind names generated from these tokens (`bg-paper`, `text-ink`,
+`t-headline-sm`, `rounded-slip`, `ease-fl-out`).
 
 How this document was produced: the concept, palette and fonts are a fixed brief.
 The `ui-ux-pro-max` skill was used to complete the system (states, scales,
-accessibility rules, chart and Flutter guidance) and to check it. Its generic
+accessibility rules, chart and web-stack guidance) and to check it. Its generic
 style suggestion (Swiss minimalism, Outfit / Work Sans, a red-on-pink palette) was
 rejected because the brief takes priority. Its accessibility rules were kept, and
 they changed three things in the palette — see "Contrast findings" below.
@@ -97,14 +100,27 @@ Rules that follow:
 - Status is never colour-only: stamps always contain a word, the deadline ring
   always has a time label, veg markers have a shape and a semantic label.
 
-### 1.5 Material mapping
+### 1.5 How the tokens reach the code (React + Tailwind CSS v4)
 
-`ColorScheme` is filled from the tokens so stock Material widgets inherit the
-concept: `primary = chilliDeep`, `onPrimary = surface`, `secondary = leaf`,
-`tertiary = turmeric`, `surface = surface`, `onSurface = ink`,
-`onSurfaceVariant = inkSoft`, `outline = controlBorder`, `outlineVariant = line`,
-`error = chilliDeep`. Everything Material cannot express lives in the
-`FoodLoopTokens` `ThemeExtension`.
+Raw values exist only in `src/styles/index.css`:
+
+1. `:root` holds the paper theme as CSS variables (`--fl-paper`, `--fl-ink`,
+   `--fl-chilli-deep` ...). `[data-theme='dark']` on `<html>` redefines the same
+   variables for the chalkboard theme. The chalkboard block (`--fl-board`,
+   `--fl-chalk` ...) is defined once and never changes.
+2. `@theme inline` maps every variable to a Tailwind colour (`--color-ink:
+   var(--fl-ink)`), so `bg-ink`, `text-chilli-deep`, `border-line` and opacity
+   forms like `bg-ink/6` follow the theme automatically. Tailwind's default
+   palette is removed (`--color-*: initial`), so a stray `bg-blue-500` cannot
+   appear.
+3. The theme toggle (`ThemeContext`) sets `data-theme`; `index.html` applies the
+   saved choice before the first paint, so there is no flash of the wrong theme.
+4. `dark:` is a custom variant bound to `data-theme`, not to the operating
+   system setting.
+
+The slip toast is ink-coloured (dark on paper, light on the chalkboard), so its
+DONE / NOT DONE marks use the opposite theme's accents (`--fl-slip-done`,
+`--fl-slip-error`) to stay above 4.5:1.
 
 ---
 
@@ -192,9 +208,9 @@ to a change. If it does none of these it is removed.
 | `stagger` | 40ms per item, capped at 8 items | First-load list entrance only |
 | `count` | 900ms | ImpactNumber count-up |
 | `stampDrop` | 420ms | The approve stamp (signature moment, used once) |
-| `easeOut` | `Cubic(0.23, 1, 0.32, 1)` | Default: things arriving |
-| `easeInOut` | `Cubic(0.77, 0, 0.175, 1)` | Things moving on screen |
-| `stampCurve` | `Cubic(0.2, 0.9, 0.3, 1.15)` | Stamp settle with a small overshoot |
+| `easeOut` | `cubic-bezier(0.23, 1, 0.32, 1)` (`ease-fl-out`) | Default: things arriving |
+| `easeInOut` | `cubic-bezier(0.77, 0, 0.175, 1)` (`ease-fl-in-out`) | Things moving on screen |
+| `stampCurve` | `cubic-bezier(0.2, 0.9, 0.3, 1.15)` | Stamp settle with a small overshoot |
 
 - No bouncy springs on everyday UI. Exits are faster than entrances.
 - Press feedback is a scale to 0.98 on slips and buttons, never a layout shift.
@@ -202,8 +218,10 @@ to a change. If it does none of these it is removed.
 - **Stamp drop:** the APPROVED stamp starts at scale 1.9, opacity 0, rotation -16°,
   and lands at scale 1, rotation -6° with a light haptic. Used only when a donor
   approves a claim.
-- **Reduced motion:** when `MediaQuery.disableAnimations` is true, everything
-  that moves or scales is skipped: the list stagger and rise, the count-up,
+- **Reduced motion:** when the system asks for reduced motion
+  (`prefers-reduced-motion: reduce`, read with motion's `useReducedMotion()` in
+  components and a media query in CSS), everything that moves or scales is
+  skipped: the list stagger and rise, the count-up,
   the Hero flight, the press scale, bottom-sheet slides and the stamp's fall
   and turn. Short opacity fades remain (at most 120ms) because they aid
   comprehension: list items fade in together, page and panel cross-fades stay,
@@ -220,15 +238,18 @@ Every interactive component defines all of these states.
 | State | Treatment |
 |---|---|
 | Default | As specified |
-| Hover (web) | Slip lifts to elevation 1; buttons darken by an 8% ink overlay; cursor becomes a pointer |
-| Pressed | Scale 0.98, 12% ink overlay |
-| Focused | 2px `ink` focus ring with a 2px gap (chalk in dark). Never removed |
-| Disabled | 40% opacity, no pointer, no tap |
+| Hover | Slip lifts to elevation 1 (an extra soft `drop-shadow`, outline darkens to `controlBorder`); buttons darken ~10%; cursor becomes a pointer |
+| Pressed | `active:scale-[0.98]` on slips and buttons (transform only, no layout shift; off under reduced motion) |
+| Focused | `:focus-visible` gets a 2px `ink` outline with a 2px offset (chalk on the board, `.on-board`). Inputs show a 2px ink edge instead. Never removed |
+| Disabled | Buttons become a sunken paper slot (`sunken` fill, `controlBorder` outline, `inkSoft` label), never a faded fill; `cursor: not-allowed`. The Admin role slip is 60% opacity with "Not here" printed on it |
 | Loading | Button keeps its width; label is replaced by a small mono "..." ticker and the button is disabled |
-| Error | `chilliDeep` border and a message below the field with an icon |
+| Error | `chilliDeep` border, `aria-invalid`, and a small mono message in `chilliDeep` below the field with a warning icon, linked by `aria-describedby` |
 | Selected | Ink fill with paper text for chips; a stamp-style check for role slips |
 
-Minimum tap target is 48×48. Targets are at least 8 apart.
+Minimum tap target is 48×48 (`min-h-12`). Targets are at least 8 apart.
+Browser surfaces follow the palette too: text selection is turmeric with ink
+text, the caret is ink, scrollbars use `perforation`, and Chrome's autofill
+keeps the sunken paper fill.
 
 ### Buttons
 - **Primary (ink):** `ink` fill, `paper` label. The default action on most screens.
@@ -239,9 +260,11 @@ Minimum tap target is 48×48. Targets are at least 8 apart.
 - Height 48 (52 on mobile primary actions), radius `rControl`, label `labelLarge`.
 
 ### Inputs
-Sunken fill `surfaceSunken`, 1px `controlBorder`, radius `rControl`, visible label
-above the field (never placeholder-only), helper or error text below. Validation
-runs on blur and on submit.
+Sunken fill `surfaceSunken`, 1px `controlBorder`, radius `rControl`, 16px text
+(so phones do not zoom in), visible `<label>` above the field (never
+placeholder-only), helper or error text below. Validation runs on blur, on
+submit, and on every change while a field shows an error (see VALIDATION.md).
+Password fields have a show/hide button (`aria-pressed`).
 
 ---
 
@@ -249,7 +272,9 @@ runs on blur and on submit.
 
 ### TokenCard
 The food listing. A slip of `surface` paper with:
-- A semicircle notch cut from each side (`CustomClipper`), placed on the
+- A semicircle notch cut from each side (a CSS `mask` of two radial
+  gradients on `.slip-paper`; the parent `.slip` draws the 1px outline with
+  four `drop-shadow` filters, so the outline follows the notches), placed on the
   perforation line.
 - **Top:** veg marker, title (`headlineSmall`), donor name, StatusStamp in the
   top-right corner.
@@ -281,7 +306,8 @@ CANCELLED `stampGrey`, ASSIGNED `ink`, PICKED UP `ink`, DELIVERED `leaf` with a
 double border, EXPIRED `stampGrey` crossed out.
 
 ### ReceiptTimeline
-A printed receipt: zigzag torn top and bottom edges (`CustomClipper`), mono text,
+A printed receipt: zigzag torn top and bottom edges (a CSS `mask` of two
+repeating conic gradients, one 12px tooth per tile), mono text,
 dotted leaders between label and time ("Requested ........ 12:40 PM"). Steps that
 have not happened yet are printed in `inkSoft` with "--:--".
 
@@ -309,20 +335,29 @@ A loader in the exact shape of a TokenCard with a slow opacity pulse (static whe
 reduced motion is on). No spinners for content.
 
 ### EmptyState
-A simple illustration drawn with Flutter shapes (an empty plate, a clear counter,
+A simple illustration drawn as plain SVG geometry (an empty plate, a clear counter,
 a blank slip), a warm specific line of copy, and one action.
 
 ---
 
 ## 7. Layout
 
-One `ResponsiveShell`, three breakpoints.
+One `ResponsiveShell`, three breakpoints, mobile first. Tailwind's own
+`sm`/`md`/`lg` are removed; the app's breakpoints are named for what they mean:
 
-| Breakpoint | Navigation | Content |
-|---|---|---|
-| Mobile `< 600` | Bottom bar with a raised centre action | One column; forms are bottom sheets |
-| Tablet `600–1024` | Navigation rail | Two columns; detail opens as a side panel |
-| Desktop `> 1024` | Menu-board sidebar (240) | Main area + right activity rail (300); max width 1320; dialogs |
+| Tailwind variant | Width | Navigation | Content |
+|---|---|---|---|
+| (none) | `< 600` | Bottom bar (68px) with a raised centre action | One column; forms are bottom sheets |
+| `tablet:` | `>= 600` | Dark navigation rail (92px), icons over labels | Two columns; detail opens as a side panel |
+| `split:` | `>= 900` | — | Sign-in, register and welcome split into chalkboard + paper |
+| `desktop:` | `> 1024` | Menu-board sidebar (248) | Main area + activity rail (304); max width 1320, left-aligned; dialogs |
+
+The layout switches are CSS, so all three navigations exist in the markup and
+the hidden ones are `display: none` (out of the accessibility tree). Only a
+screen whose structure differs (the welcome slides) reads the width in
+JavaScript (`useMediaQuery`). Gutters: 16 / 24 / 40. Heights use `dvh`, and the
+bottom bar adds `env(safe-area-inset-bottom)`. There is no horizontal scroll at
+360, 768 or 1440.
 
 Screens differ on purpose:
 - **Recipient feed** — a counter of token slips under a large title.
@@ -334,9 +369,10 @@ Never four identical stat cards in a row. Never centred-everything.
 
 ---
 
-## 8. Charts (`fl_chart`)
+## 8. Charts (Recharts)
 
-The 7-day deliveries chart is a bar chart in the palette: `leaf` bars with square
+The 7-day deliveries chart (Recharts, styled with the CSS variables, animation
+off) is a bar chart in the palette: `leaf` bars with square
 tops, today's bar in `chilli`, mono axis labels, dotted `perforation` grid lines,
 and the value printed directly above each bar so the chart does not depend on
 colour or hover. A text summary is provided for screen readers.
@@ -356,5 +392,5 @@ colour or hover. A text summary is provided for screen readers.
 ## 10. Banned
 
 Purple or blue gradients, glassmorphism, neon glows, stock-illustration heroes,
-four identical stat cards with an icon in a coloured circle, default Material
+four identical stat cards with an icon in a coloured circle, default framework
 blue, uniform 8px radius everywhere, emoji as icons, centred-everything layouts.

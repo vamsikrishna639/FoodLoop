@@ -9,11 +9,12 @@ Lines marked *(inferred)* are assumptions, not statements from the brief.
 
 ## Platform
 
-adaptive — Flutter, targeting Android and Web from one codebase.
+web — a responsive web app (phones, tablets and laptops in the browser).
 
 ## Stack
 
-Flutter (Dart) with provider, go_router, http, google_fonts, fl_chart.
+MERN: React 19 (Vite, JavaScript) with React Router, Tailwind CSS v4, motion,
+Recharts and react-hook-form.
 Node.js + Express + MongoDB (Mongoose) backend with JWT auth.
 
 ## Users

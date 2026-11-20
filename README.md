@@ -8,87 +8,62 @@ assigns pickups.
 The interface follows one idea, "Canteen Token": every listing is a paper token
 slip, every status is a rubber stamp, every history is a printed receipt, and
 the canteen's own area is a chalkboard. The full design system is in
-[DESIGN.md](DESIGN.md).
+[DESIGN.md](DESIGN.md); the form rules are listed in [VALIDATION.md](VALIDATION.md).
+
+The stack is MERN:
 
 | Part | Stack |
 |---|---|
-| `backend/` | Node.js, Express, MongoDB (Mongoose), JWT + bcrypt |
-| `frontend/` | Flutter (Android and Web), provider, go_router |
+| `backend/` | Node.js, Express, MongoDB (Mongoose), JWT + bcrypt, express-validator |
+| `frontend/` | React 19 (Vite, JavaScript), React Router, Tailwind CSS v4, motion, Recharts, react-hook-form |
 
 ## Build status
 
-The app is built in five stages. **All five stages are complete.**
+The backend is complete. The React frontend is being built in five stages.
 
 | Stage | Contents | Status |
 |---|---|---|
-| 1 | Design system, component gallery, auth, role-based shell | Done |
-| 2 | Food listings: post, edit, delete, browse, detail; welcome slides | Done |
-| 3 | Claim workflow: request, approve, reject, cancel; My requests | Done |
-| 4 | Volunteers, notifications, dashboards, approvals | Done |
-| 5 | Testing and polish: Postman collection, screenshots, audit, demo script | Done |
+| 1 | Setup, design tokens, component gallery, sign in / register / waiting page, role-based routing, responsive shell | Done |
+| 2 | Food listings: recipient counter and detail, donor board, post / edit / delete | Next |
+| 3 | Claims: request, approve (stamp drop), turn down, cancel; My requests | Planned |
+| 4 | Volunteer pickups, alerts, dashboards and chart, admin approvals and assignment | Planned |
+| 5 | Polish, audit, screenshots | Planned |
 
-What works today:
+What works in the browser today:
 
-- **First visit:** three welcome slides on phones; on wide screens a split
-  page with the real "portions delivered" figure. Shown once per device.
-- **Recipient:** "Today's Counter" with search and filter tags, soonest
-  deadline first. Phones open a token's details as a page; tablets and
-  desktops show them in a side panel. The raised **Browse** button puts the
-  cursor in the search field.
-- **Requesting food:** on a token's details, pick a quantity (capped at what
-  is left), add an optional note for the canteen and send the request. Once
-  sent, the area shows "You asked for ..." with its stamp, a link to My
-  requests and a Cancel button; a second request for the same token is not
-  possible while one is pending or approved.
-- **My requests (recipient):** every request printed as a receipt
-  (Requested, Approved / Turned down / Cancelled, Pickup by, Volunteer,
-  Picked up, Delivered) with Active and Past tabs and Cancel where allowed.
-- **Donor:** the chalkboard "Today's Surplus", the **Requests** queue with
-  Approve and Turn down, a printed tally, the **Post food** form (bottom
-  sheet on phones, dialog on wider screens), and **Listings** with Open /
-  Closed tabs, Edit and Delete. Approving a request drops an APPROVED rubber
-  stamp onto it (when the device asks for reduced motion, the stamp just fades
-  in at rest).
-- **Volunteer (Pickups):** every run printed as a pickup slip (what to
-  carry, from where, to whom, their phone, pickup deadline, and the
-  assigned / picked up / delivered times). One large button per run:
-  **I've collected it**, then **Mark delivered**. An assigned run can be
-  handed back ("Can't do this run"); it returns to the admin's list.
-  Tabs: Assigned, On the way, Delivered.
-- **Admin (Overview):** portions delivered so far as one large figure, a
-  7-day bar chart of portions delivered per day, the **Needs a volunteer**
-  list of approved requests with **Assign volunteer** (a dialog, or a bottom
-  sheet on phones, listing volunteers with how many runs each has on), and a
-  printed "Right now" tally.
-- **Admin (Approvals):** new accounts with Approve and Reject; a table on
-  wide screens, slips on phones. Approved users are notified.
-- **Admin:** "All listings", with the same Edit and Delete.
-- **Alerts (every role):** notifications grouped by day, unread ones marked
-  with a dot and the word NEW. Tapping one marks it read and opens the page
-  it is about (a canteen's news opens the Board, a recipient's My requests,
-  a volunteer's Pickups); the page's name is printed under each line.
-  **Mark all read** clears them all. The unread count shows on the bell.
-- **Activity (desktop):** the right-hand rail lists recent events, limited to
-  what each role may see (the admin sees everything; a donor sees their own
-  listings; recipients and volunteers see their own requests or runs, plus
-  newly posted food for recipients). It refreshes every 20 seconds, and stops
-  while the browser tab or app is in the background.
-- **Food counts only once delivered:** every "delivered" figure (the welcome
-  page, the admin's number and chart, the donor's tally, "portions received"
-  on My requests, the volunteer's "portions carried") counts delivered
-  pickups only.
+- **First visit:** three welcome slides on phones; from 900px wide a split
+  page with the real "portions delivered" figure from the API. Shown once per
+  browser.
+- **Sign in and create an account**, with checks that match the backend
+  (see VALIDATION.md): errors appear under each field when you leave it,
+  the first wrong field is focused on submit, and server answers (a used
+  email, a wrong password, the server being off) are shown too.
+- **Waiting for approval:** new and pending accounts see only this page, with
+  their account slip and a **Check again** button.
+- **Signed-in frame per role:** a bottom bar with a raised action on phones,
+  a dark rail on tablets, a menu-board sidebar plus the **Activity** rail on
+  desktops. Each role sees only its own pages; the pages that later stages
+  fill in show a short "Built in Stage N" note.
+- **Profile:** the member slip, the paper / chalkboard theme switch (saved in
+  the browser) and Sign out.
+- **Component gallery** at `/gallery`, open without signing in.
+
+The demo script below needs all five stages; until then, steps 1 to 6 work
+only up to the pages that exist.
 
 ## What you need
 
 - Node.js 20 or newer
 - MongoDB Community Server running locally on `127.0.0.1:27017`
-- Flutter 3.50 or newer (Dart 3.14), with Chrome for the web build
-- An internet connection on first run: the three typefaces are downloaded from
-  Google Fonts and then cached
+- A modern browser (Chrome, Edge, Firefox or Safari)
 
-## Setup
+The fonts (Bricolage Grotesque, Instrument Sans, JetBrains Mono) are installed
+with npm and served by the app, so no internet connection is needed after
+`npm install`.
 
-### 1. Backend
+## How to run (two terminals)
+
+### Terminal 1: the API
 
 ```
 cd backend
@@ -109,7 +84,7 @@ On macOS or Linux use `cp` instead of `copy`.
 - After pulling new code, stop and start the server again (`npm start` does
   not reload). An old server answers new endpoints with "Route not found".
 
-The settings in `.env`:
+The settings in `backend/.env`:
 
 | Name | Meaning | Default |
 |---|---|---|
@@ -118,27 +93,30 @@ The settings in `.env`:
 | `JWT_SECRET` | Secret used to sign login tokens. Change it. | placeholder |
 | `JWT_EXPIRES_IN` | How long a login lasts | `7d` |
 
-### 2. Frontend
+### Terminal 2: the web app
 
-Keep the backend running, then in a second terminal:
+Keep the API running, then:
 
 ```
 cd frontend
-flutter pub get
-flutter run -d chrome
+npm install
+copy .env.example .env
+npm run dev
 ```
 
-To run on the Android emulator, start an emulator and use `flutter run`. The
-app reaches the API at `10.0.2.2:5000` there, which is the emulator's address
-for your computer.
-
-To run on a real phone on the same Wi-Fi, pass your computer's address:
+Open `http://localhost:5173`. The API address lives in one place,
+`frontend/.env`:
 
 ```
-flutter run --dart-define=API_BASE_URL=http://192.168.1.5:5000/api
+VITE_API_URL=http://localhost:5000/api
 ```
 
-The API address lives in one file, `frontend/lib/core/config.dart`.
+Change it if the API runs elsewhere (for a phone on the same Wi-Fi, use your
+computer's address, e.g. `http://192.168.1.5:5000/api`, and start Vite with
+`npm run dev -- --host`). Restart `npm run dev` after editing `.env`.
+
+`npm run build` makes a production build in `frontend/dist`;
+`npm run preview` serves that build on `http://localhost:4173`.
 
 ## Test logins
 
@@ -292,37 +270,14 @@ expressed in a collection that runs one request at a time. It was checked in
 Stages 3 and 4 with a Node script that fired both requests together: exactly
 one succeeds.
 
-### Screenshots
+### Component gallery
 
-`docs/screenshots/` has every screen at 360, 768 and 1440 pixels wide, in the
-paper (light) and chalkboard (dark) themes: welcome, sign in, register,
-waiting for approval, component gallery, the recipient's counter, token
-detail, My requests, alerts and profile, the donor's Board, Post food form,
-listings and alerts, the volunteer's pickups and alerts, the admin's
-overview, assign picker, approvals, listings and empty alerts. Names follow
-`<role>-<screen>-<width>-<theme>.jpg`. They were taken from the release web
-build with seeded data.
-
-### Animation review
-
-`/review-animations` (Emil Kowalski's animation standards) was run over every
-animation after Stage 5. What it changed is listed in `PROGRESS.md`; in short:
-reduced motion now keeps short fades and drops only movement, navigation tabs
-and radio choices change instantly, the impact figures count up once per
-session, and cross-fades no longer jump sideways at the end.
-
-### Design audit
-
-`docs/stage5-audit.md` is the `/impeccable audit` report from Stage 5
-(16/20, "Good"), with what was found and fixed.
-
-## Component gallery
-
-Open `http://localhost:<port>/#/gallery` in the running web app (no login
-needed). It shows every signature widget with sample data: token cards, status
-stamps, portion meters, deadline clocks, the chalkboard, impact numbers,
-receipts, buttons, slips, empty states, the palette and the type scale. The
-button at the top switches between the paper and chalkboard themes.
+Open `http://localhost:5173/gallery` (no login needed). It shows every
+signature component with sample data: token cards in each state, every status
+stamp and the stamp drop, portion meters, deadline clocks, the veg markers,
+the receipt, the chalkboard, the impact number, buttons, form fields with
+their error messages, the slip messages and the empty and error states. The
+switch at the top changes between the paper and chalkboard themes.
 
 ## Project layout
 
@@ -344,21 +299,27 @@ backend/
   scripts/createAdmin.js   npm run create-admin: one approved admin account
   postman/            Postman collection with the API checks (npm run test:api)
 
-frontend/lib/
-  core/               theme tokens, router, API client, config, breakpoints, date formats
-  models/             data classes (user, food listing, claim request, pickup,
-                      notification, activity event, dashboard)
-  services/           API calls (auth, food, claims, pickups, notifications,
-                      admin, dashboard)
-  providers/          app state (auth, theme, feed, listings, claims, pickups,
-                      notifications, activity, dashboard, admin) and
-                      live_updates.dart, the foreground-only poller
-  screens/            auth, common (welcome, profile, alerts), recipient (counter,
-                      detail, my requests), donor (board, request queue, listings,
-                      form), volunteer (pickups), admin (overview, assign sheet,
-                      approvals)
-  widgets/            TokenCard, StatusStamp, StampDrop, ReceiptTimeline, ResponsiveShell,
-                      ActivityRail, DeliveriesChart and the rest
+frontend/
+  .env                VITE_API_URL (copy from .env.example)
+  index.html          applies the saved theme before the first paint
+  src/
+    main.jsx          providers (theme, slip messages, auth) around the router
+    App.jsx           every route and the gate that guards it
+    config.js         reads VITE_API_URL
+    api/              client.js (the one fetch wrapper) and one file per resource
+    context/          AuthContext, ThemeContext, ToastContext (slip messages)
+    routes/Gate.jsx   who may open which page (signed out, pending, role)
+    hooks/            useValidatedForm (react-hook-form settings), useMediaQuery
+    validation/       the rules for each form, shared constants, server errors
+    lib/              motion tokens, formatting, roles and navigation, storage
+    components/       TokenCard, StatusStamp, StampDrop, PortionMeter, DeadlineClock,
+                      ReceiptTimeline, ImpactNumber, VegMarker, Chalkboard,
+                      ResponsiveShell, ActivityRail, Field, Button and the rest
+    pages/            auth (login, register, pending), common (welcome, profile,
+                      gallery); the recipient, donor, volunteer and admin pages
+                      arrive in Stages 2 to 4
+    styles/index.css  the design tokens (CSS variables), Tailwind theme,
+                      type scale and the paper shapes
 ```
 
 ## API
@@ -448,25 +409,8 @@ Listing rules enforced by the API:
 
 ```
 cd frontend
-flutter analyze
-flutter build web
+npm run build
 ```
 
-`flutter analyze` should report "No issues found". The backend is checked
-with the Postman collection (see Testing).
-
-### If the web build shows the wrong fonts or empty icon boxes
-
-On Windows, run `flutter build web` from a path that starts with an upper-case
-drive letter, for example `cd C:\FoodLoop\frontend`. With Flutter 3.50, a
-build started from `c:\FoodLoop\frontend` (lower-case `c:`, which is how some
-editors open the folder) leaves the fonts, icons and manifest files out of
-`build/web`. To recover, delete `frontend/build/web` and
-`frontend/.dart_tool/flutter_build`, then build again from `C:\`.
-
-To look at the release build, serve the folder and open
-`http://localhost:8080`:
-
-```
-python -m http.server 8080 --directory C:\FoodLoop\frontend\build\web
-```
+The build must finish without errors. The backend is checked with the
+Postman collection (see Testing).

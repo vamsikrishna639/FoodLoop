@@ -1,324 +1,165 @@
 # FoodLoop — Progress
 
-Updated on 2026-11-15 after adding `npm run create-admin`.
+Updated on 2026-11-20 at the end of React Stage 1.
 
 ## Current stage
 
-**Stage 5 — Testing and polish: complete and committed**, including the
-`/review-animations` pass, which the user started after the Stage 5 commit
-(committed as "Animation review: reduced motion, frequency, switcher
-anchoring"). All five stages of `PROMPT.md` Part J are built. Waiting for the
-user.
+The frontend is being rebuilt in **React (Vite, JavaScript)** against the
+existing, unchanged backend. **Stage 1 of 5 is complete and committed (not
+pushed).** Waiting for the user to test it.
 
-## Admin creation script (after Stage 5)
+| Stage | Contents | Status |
+|---|---|---|
+| 1 | Setup, design tokens, component gallery, auth + routing, responsive shell | Done |
+| 2 | Food listings: recipient counter + detail, donor board, post / edit / delete, Listings | Next |
+| 3 | Claims: request form, approve with stamp drop, turn down, cancel, My requests receipts | Planned |
+| 4 | Volunteer pickups, alerts + badge, live activity refresh, dashboards + Recharts chart, admin approvals and assign dialog | Planned |
+| 5 | `/impeccable audit` + `polish`, `review-animations`, screenshots, VALIDATION.md complete, README | Planned |
 
-`npm run create-admin -- "Full Name" email password [phone]` in `backend/`
-(`scripts/createAdmin.js`). It checks the register form's rules, hashes the
-password with bcrypt (cost 10, as everywhere else), and creates an `approved`
-admin with organisation "Campus Admin". It refuses an existing email (never
-overwrites) and never prints the password. Phone is optional; without it the
-account shows "Not given", because the User model requires a phone.
+The backend is complete (all five stages of the original build). It has not
+been changed in the rewrite. CORS: `app.use(cors())` already allows
+`http://localhost:5173`, so the one allowed backend change was not needed.
 
-Verified against the test database `foodloop_stage5` with throwaway values:
-missing arguments and bad input exit 1 with the reasons; a valid run creates
-the account (role admin, approved, a 60-character `$2b$` hash, no plain
-password anywhere in the record); bcrypt accepts the right password and
-rejects a wrong one; the same email in other capitals is refused. The test
-account was deleted afterwards. No real admin details were used, and none are
-in the repository.
+## Done in Stage 1
 
-Assumptions: the phone is an optional fourth argument (the request named
-three); the script does not change or promote existing accounts; a re-seed
-deletes script-made admins along with everything else.
+- **Move:** the previous app moved to `frontend-flutter-old/` with `git mv`
+  (item by item, because the editor held a lock on the folder). Untouched since;
+  reference only.
+- **Setup:** Vite 8 + React 19, React Router 8 (`createBrowserRouter`),
+  Tailwind CSS 4.3 (`@tailwindcss/vite`), motion 14, Recharts 3 (installed,
+  used in Stage 4), react-hook-form 7, Phosphor icons, self-hosted variable
+  fonts (`@fontsource-variable/*`). API URL in `frontend/.env`
+  (`VITE_API_URL`, with `.env.example`).
+- **Design tokens** (`src/styles/index.css`): the paper and chalkboard palettes
+  as CSS variables switched by `html[data-theme]`; `@theme inline` maps them to
+  Tailwind names, with Tailwind's default palette and breakpoints removed;
+  breakpoints `tablet` 600, `split` 900, `desktop` 1025; radii and shadows;
+  the type scale as `t-*` utilities; the token slip notch mask, perforation,
+  receipt zigzag mask, chalkboard and skeleton pulse. Motion tokens in
+  `src/lib/motion.js`. DESIGN.md refreshed for the web stack with
+  `ui-ux-pro-max` (CSS token flow, breakpoints, component states, browser
+  surfaces).
+- **Components:** Button (ink / accent / outline / text / chalk, loading
+  ticker, sunken disabled slot), StatusStamp (all statuses, double border for
+  delivered, crossed expired), StampDrop, TokenCard (CSS-mask notches, outline
+  that follows them, printed ticket block when there is no photo),
+  SkeletonToken, PortionMeter, DeadlineClock (SVG ring), ReceiptTimeline,
+  ImpactNumber (count-up once per session), VegMarker, Chalkboard + ChalkItem,
+  EmptyState / ErrorState with SVG drawings, BrandMark, Field (TextField,
+  TextArea, PasswordField, FieldError, FormNotice), ThemeSwitch, PageFrame,
+  ResponsiveShell, ActivityRail.
+- **App plumbing:** `api/client.js` (JWT, envelope, `ApiError` with
+  `fieldErrors`, 12s timeout, 401 logout), AuthContext (restore session on
+  load, login, register, logout, refresh), ThemeContext, ToastContext (slip
+  messages), route gates (`routes/Gate.jsx`), roles and navigation
+  (`lib/roles.js`).
+- **Pages:** Welcome (slides under 900px, split with the live impact figure
+  above), Sign in, Create account (role picker as four token slips, Admin
+  disabled), Waiting for approval (account slip, Check again), Profile (member
+  slip, theme switch, sign out), Component gallery (`/gallery`), and a
+  "Built in Stage N" placeholder for each page later stages build.
+- **Validation:** react-hook-form only; rules in `src/validation/`
+  (`constants.js`, `loginRules.js`, `registerRules.js`, `serverErrors.js`);
+  `useValidatedForm` hook; VALIDATION.md written (Stage 2-4 forms listed with
+  their backend rules, files added in those stages).
+- **Docs:** CLAUDE.md (with the MERN-only and cleanup rules), README (how to
+  run both servers), PRODUCT.md (stack), DESIGN.md, VALIDATION.md, this file.
 
-## Animation review (after Stage 5)
+## Verified in Stage 1
 
-Every animation in the app was checked against the review-animations
-standards (Emil Kowalski's). Kept as they were: the page cross-fade (200ms in,
-120ms back), the first-load list stagger (40ms steps, 8px rise, 200ms), the
-activity rail's new-line fade, the press scale (0.98, 120ms), filter tag and
-sidebar colour fades, the skeleton pulse (a loading signal, still under
-reduced motion), the button's printing dots, and the stamp drop (420ms, over
-the 300ms rule on purpose: it is the one rare, signature moment).
+Against a second API on port 5050 with its own database (`foodloop_test`,
+seeded); the user's database on 5000 was not touched. Vite was pointed at it
+with `VITE_API_URL=http://localhost:5050/api`.
 
-Fixed:
-- **Reduced motion removed fades as well as movement.** The standard (and
-  DESIGN.md) says gentler, not none. New `FlMotion.fade` keeps opacity and
-  colour changes (capped at 120ms); `FlMotion.of` is now only for things
-  that move or scale. Under reduced motion: the page cross-fade stays (it was
-  cut), list items fade in together without rising (they appeared at once),
-  the APPROVED stamp fades in at rest over 120ms (it popped in), the
-  decision-line and run-button cross-fades stay.
-- **The press scale jumped under reduced motion** (a zero duration still
-  snapped to 0.98). Now there is no press scale at all then.
-- **Cross-fades jumped sideways at the end.** `AnimatedSwitcher` centres the
-  old and new child by default, so on approval the narrower "6 packets
-  reserved ..." line appeared centred and jumped left when the buttons left;
-  the volunteer's button-to-closing-line swap and the stamp swap did the same.
-  New `FlMotion.topLeft` / `topRight` layout builders anchor them.
-- **The bottom-bar tab dash animated its width on every tab tap** (a layout
-  property on a many-times-a-day action). It now changes instantly.
-- **The assign picker's rows animated a border width** (1px to 2px, which
-  pushed the text while it ran). Selection now answers instantly, and the
-  padding gives back the extra pixel so nothing shifts.
-- **The impact number counted up for 900ms every time the page opened** (the
-  admin's home page, many times a day). It now counts up once per figure per
-  session, then starts from the value it last showed: still on a return
-  visit, counting only the difference when a delivery added to it.
-  `ImpactNumber.forget()` on sign-out.
-- **The recipient's side panel cross-faded for 200ms** when switching tokens,
-  long enough to show two panels of text on top of each other; now 120ms.
-- **The Hero used Material's curve** (fastOutSlowIn); it now uses the app's
-  movement curve, `FlMotion.easeInOut`.
-- **Bottom sheets slid up under reduced motion**; they now just appear.
-- DESIGN.md's reduced-motion and ImpactNumber lines updated to match.
+- `npm run build` succeeds.
+- Screenshots (Playwright script in the session scratchpad) of welcome, sign
+  in, register, pending, profile, gallery, each role's home and the alerts
+  placeholder at 360, 768 and 1440 in both themes: **no horizontal overflow and
+  no console errors** at any size.
+- Flows: empty register submit shows five field errors and focuses the role
+  group; a short password shows "Password must be at least 6 characters" on
+  blur and clears as soon as it is fixed; a used email comes back from the
+  server (409) and is shown under the email field; a wrong password shows a
+  NOT DONE slip; a correct sign-in lands on `/home`; a recipient typing
+  `/approvals` is sent to `/home`; reloading `/profile` stays on `/profile`;
+  sign out goes to `/login`; the pending account lands on `/pending` and
+  Check again shows a NOTE slip; a first visit to `/login` goes to `/welcome`
+  and its Create an account button opens `/register`.
+- Keyboard: Tab into the role picker and arrow keys pick a role; the focus
+  ring shows on the slip; a field error clears while typing.
+- Reduced motion (emulated): the gallery renders, the slip appears without
+  movement.
+- `impeccable detect` over `frontend/src`: no findings.
 
-Verified: `flutter analyze` clean; in the browser at 1440 the approval ends
-with the decision line on the left (no jump) and the stamp landed, with and
-without reduced motion (`emulateMedia({ reducedMotion: 'reduce' })`, which
-Flutter web reads). Not verified frame by frame: here a screenshot takes
-seconds and the CDP screencast sent no frames on the second try, so the
-in-between frames of the fades and the count-up were not seen.
-
-## Done in Stage 5
-
-**Postman collection** (`backend/postman/FoodLoop.postman_collection.json`)
-- 80 requests, 231 checks, six folders; a collection-level check that every
-  response uses the `{ success, message, data }` envelope.
-- Negative tests: over-allocation (second approval refused, listing still
-  6 reserved, request back to pending), wrong role (8 cases), invalid claim
-  and pickup transitions (7 cases), duplicate request (409), double assign
-  (409), expired listing, registering as admin, bad ids and filters, field
-  errors.
-- Self-contained: it posts its own listing, so it needs only the seeded
-  logins and can run more than once. `npm run test:api` runs it with newman.
-
-**Stage 4 leftovers**
-- Alerts link to their page (`alertTarget` in `alerts_screen.dart`): tap marks
-  read and opens Board / My requests / Pickups / Counter by type and role; the
-  page name is printed under the line with an arrow; the screen-reader label
-  says "Open My requests". Read lines that lead somewhere stay tappable.
-- Disabled buttons: a sunken paper slot with soft ink text and an outline, in
-  the theme for every filled button and in `FlButton`'s accent variant. The
-  "Choose a volunteer" button no longer shows as a pale chilli.
-
-**Audit** (`/impeccable audit`, report in `docs/stage5-audit.md`, 16/20 Good,
-no P0/P1). The platform line in PRODUCT.md (`adaptive — Flutter, ...`) is read
-by the launcher as unknown and treated as web; the native audit reference was
-used, as in Stage 4. The launcher has no `audit-storage` command, so the report
-was saved in `docs/`. Fixed from it:
-- The TokenCard Hero no longer flies when reduced motion is on.
-- Filter tags and the nav badge use minimum heights, so large text fits.
-- Listing photos decode at the size shown (`cacheWidth`).
-Left as P3: lists are Columns, not lazy builders (fine at tens of items); the
-8px printed "TOKEN" caption in the empty-photo block (decorative).
-
-**Polish** (`/impeccable polish`, from the full screenshot pass)
-- The volunteer's Pickups opened on an empty "Assigned 0" tab while a run was
-  "On the way". It now opens on the first tab with work, once per visit.
-- No other defects found across 19 screens x 3 widths x 2 themes plus the
-  Post food form and the assign picker: no overflow, dark mode correct
-  everywhere (chalkboard stays dark, stamps readable, chart colours brightened).
-
-**README**: demo script (canteen posts → recipient requests → canteen approves
-→ admin assigns → volunteer collects and delivers → what each role sees), the
-Testing section (collection, screenshots, audit), Stage 5 marked done.
-
-## Verified in Stage 5
-
-All against a second API on port 5050 with its own database
-(`foodloop_stage5`); the user's `foodloop` database was not touched.
-- newman: 80 requests, 231 assertions, 0 failures, twice in a row on the
-  same database.
-- Screenshots: 126 files of the release web build in `docs/screenshots/`
-  (19 screens and 2 overlays, each at 3 widths x 2 themes; the volunteer's 6
-  retaken after the tab fix), reviewed as contact sheets. Browser console: no errors
-  from the app.
-- Clicked in Playwright: an alert line → lands on `/#/requests`; Meera opens on
-  "On the way 1" with **Mark delivered**; the assign picker shows the new
-  disabled button in light and dark.
-- **The demo flow through the UI** on a fresh seed: Ananya at 360 steps to 4
-  and taps **Request 4 plates** → the canteen taps **Approve** on that slip →
-  the admin taps **Assign volunteer**, picks Kiran, **Assign Kiran** → Kiran at
-  360 taps **I've collected it**, then **Mark delivered** (DELIVERED stamp,
-  "Delivered. Thank you for the run") → the API shows the request delivered by
-  Kiran Kumar, impact 112 → 116, and Ananya's My requests says 52 portions
-  received. The posting step was done through `POST /api/foods` (the same
-  call the form makes) because Playwright cannot type reliably into Flutter
-  web text fields; the form itself was clicked through in Stage 2.
-- `flutter analyze`: no issues. `flutter build web` from `C:\FoodLoop\frontend`.
-
-## Stage 4 (summary kept for reference)
-
-### Done in Stage 4
-
-**Shape round** (`/impeccable shape`): one question, answered: the activity
-feed is **scoped per role** (admin everything; donor their own listings;
-recipient and volunteer only events involving them, plus newly posted food
-for recipients).
-
-**Backend**
-- `/api/pickups`: `unassigned` (admin: approved requests with no live run),
-  `assign` (admin), `mine` (volunteer), `:id/status` (volunteer, own run).
-  Status changes use `assertPickupTransition` and flip with the current
-  status in the filter, so a double tap changes a run once. A volunteer can
-  hand back a run (`cancelled`); the request returns to the admin's list.
-- Listing completion: after each delivery, `completeIfDone` marks the listing
-  `completed` when nothing more can be given (all reserved, or pickup time
-  passed) and every approved request on it is delivered.
-- `/api/users` (admin): list with `status` / `role` filters, volunteers with
-  `activeRuns`; `:id/verify` approves or rejects (never an admin).
-- `/api/notifications`: list (50, newest first, with `unreadCount`),
-  `:id/read` (own only), `read-all`.
-- `/api/dashboard`: the role's figures and a 7-day series of delivered
-  portions. `/api/activity`: up to 25 recent events written as sentences
-  ("You requested ...", "Meera Nair delivered ..."). Both are worked out from
-  the dates already stored; nothing new is saved. Role scoping lives in one
-  function, `scopeFor`.
-- Notifications now cover every type in rule 8: volunteer assigned (to the
-  volunteer and the recipient), delivered (to the recipient and the canteen),
-  account approved.
-- `Pickup` gained `cancelledAt`; `Notification` sends `id`. `utils/amount.js`
-  is shared by every message.
-- Seed: two more delivered lunches in the past week (chart data, 112
-  portions over four deliveries), Farhan's approved 3 kg of dal with no
-  volunteer (the admin's to-do), posting times set to when the food was
-  prepared, notifications with realistic times and a mix of read and unread.
-
-**Frontend**
-- Models: `Pickup`, `AppNotification`, `ActivityEvent`, `DashboardStats`;
-  `AppUser` gained `createdAt` and `activeRuns`.
-- Services: pickups, notifications, admin (users), dashboard (dashboard and
-  activity). Providers: `PickupsProvider`, `NotificationsProvider`,
-  `ActivityProvider`, `DashboardProvider`, `AdminProvider`, all reset on
-  sign-out.
-- `LiveUpdates`: one 20-second poller for the bell badge and (only while the
-  desktop rail is on screen) the activity feed. An `AppLifecycleListener`
-  stops it when the tab or app is hidden and refreshes at once on return.
-- **Volunteer Pickups** (`screens/volunteer/pickups_screen.dart`): tabs
-  Assigned / On the way / Delivered, each run a pickup-slip receipt, one
-  large button ("I've collected it", then "Mark delivered"), a turmeric note
-  when the counter closes within an hour, "Can't do this run" with a
-  confirmation. A run moved on this visit stays in its tab with the new
-  stamp (plain 200ms fade). Wide screens show "Portions you carried" beside
-  the runs; phones print the tally under Delivered only.
-- **Alerts** (`screens/common/alerts_screen.dart`): grouped by day; unread
-  lines have a chilli dot, the word NEW and a bolder message; tapping marks
-  read (optimistic); "Mark all read" beside the heading. The bell shows the
-  unread count on the bottom bar, rail and sidebar.
-- **Admin Overview** (`screens/admin/overview_screen.dart`): an impact block
-  (96px "portions delivered" with one printed sentence beside it, not stat
-  tiles) and the 7-day chart (`widgets/deliveries_chart.dart`: leaf bars,
-  today in chilli, square tops, values printed on the bars, dotted grid, mono
-  labels, a screen-reader summary, no animation). Then **Needs a volunteer**
-  (slips with "Assign volunteer"; ASSIGNED stamp in place after assigning)
-  and a "Right now" receipt with a link to Approvals.
-- **Assign sheet** (`screens/admin/assign_sheet.dart`): a dialog on wider
-  screens, a bottom sheet on phones; volunteers listed least busy first with
-  "FREE" / "1 RUN ON"; "Assign Meera" button; server errors shown inside.
-- **Approvals** (`screens/admin/approvals_screen.dart`): Waiting / Decided
-  tags; a printed table when the content is 640px or wider, slips below
-  that; Approve, and Reject with confirmation; decided rows keep their stamp
-  in place this visit.
-- **Activity rail** (`widgets/activity_rail.dart`) replaces the placeholder;
-  new lines fade in and settle 6px (200ms), the first load does not animate.
-- Donor tally gained "Delivered, ever"; My requests shows "N portions
-  received so far". `ComingSoonScreen` is gone. `FadeIn` moved to
-  `widgets/fade_in.dart` and is shared.
-
-### Verified in Stage 4
-
-- API: 63 checks in a Node script against a second server on port 5050 with
-  its own database (`foodloop_stage4`), all passing after the last change.
-  They cover: dashboard figures for all four roles; pending and no-token
-  blocks; activity sorted newest first, recipient sees no other recipient,
-  volunteer sees only own runs; notifications list, unread count, mark read,
-  someone else's (404), bad id, read-all; users list, wrong role, bad
-  filter, admins never listed, volunteer loads, approve, approve twice,
-  verify an admin; unassigned list; assign by a donor (403), empty body
-  field errors, assign to a recipient, assign a pending request, assign,
-  assign twice (409), notifications to volunteer and recipient; runs carry
-  phone and token; other volunteer (403), assigned → delivered (400), bad
-  status, **two "picked up" taps in parallel: exactly one 200**; cancel after
-  pick-up refused; delivered; delivered → cancelled refused; partial listing
-  not completed; fully reserved and delivered → completed; donor told;
-  impact grows; hand back → back in the queue → reassigned; receipt shows the
-  new volunteer.
-- **Polling pause**, measured in the browser on the release build (admin at
-  1440): visible for 45s → 2 notification and 2 activity requests; tab hidden
-  for 45s → **0 and 0**; shown again → 1 and 1 within 2 seconds.
-- Clicked through in Playwright (semantics tree): admin assigns Meera from
-  the dialog → ASSIGNED stamp, slip, "NONE WAITING", the rail shows the new
-  line on its next load; Meera taps "I've collected it" then "Mark delivered"
-  at 360 → PICKED UP then DELIVERED stamps, tally 58 → 61; Farhan taps an
-  unread alert → badge 4 → 3.
-- Screenshots of the release build: Overview at 1440 / 768 dark / 360 light
-  and 360 dark (lower half), assign dialog, Approvals at 1440 light (table) /
-  1440 dark and 768 dark (slips before the fix; table width fixed after) /
-  360 light, Pickups at 1440 light / 360 dark / 360 light, Alerts at 768 /
-  1440 dark / 360 empty, My requests at 768, Board at 1440 (tally).
-- `flutter analyze`: no issues. `flutter build web` from `C:\FoodLoop\frontend`.
-
-From the critique (`/impeccable critique`; the platform is `adaptive`, so it
-is a design review without the web detector):
-- P1, fixed: on a 360px phone the volunteer's button was below the fold.
-  The lede is hidden on phones and the tally line moved to the Delivered tab.
-- P2, fixed: Overview at 1440 stacked the impact block so tall that the
-  volunteer queue started below the fold; number and sentence now share a row.
-- P2, fixed: Approvals showed slips at 1440 because of the activity rail;
-  the table now fits the ~690px.
-- P3, fixed: the Alerts lede repeated the empty state; "Accounts waiting"
-  wrapped on phones (now "To approve").
-- P3, left for Stage 5: alerts are not links to the page they are about;
-  the disabled "Choose a volunteer" button is a pale chilli.
+Fixed after looking at the screenshots (critique): the slip's DONE / NOT DONE
+marks were below 4.5:1 (new `slip-done` / `slip-error` tokens); the sidebar's
+red action used ink on brand chilli (now `chilli-deep` with its paper label);
+the slip's close button was 40px (now 48); an error stayed after a value was
+fixed until the next blur (now re-checked on change while shown).
 
 ## Known issues / not verified
 
-- Animation in-between frames not inspected (see the animation review).
-- **Restart the API on port 5000 and run `npm run seed`** before the demo:
-  the user's database was not touched from here.
-- **`frontend/build/web` was last built for port 5050** during testing and is
-  rebuilt for the default API before the commit; if in doubt, run
-  `flutter build web` again from `C:\FoodLoop\frontend`.
-- The Postman collection was run with newman, not inside the Postman or
-  Thunder Client apps (same file format, v2.1).
-- Not tried by hand: the bottom-sheet assign picker's Assign button (only
-  shown in a screenshot at 360), on a real Android device the lifecycle pause
-  and the app in general (no Android run yet), the stamp drop's
-  reduced-motion path, text scaling at 200% on a device.
-- No Flutter tests; Google Fonts need internet on first load.
+- Not tried on a real phone (only emulated widths); `navigator.vibrate` for the
+  stamp drop is untested on Android.
+- The JavaScript bundle is about 625 kB before gzip (Vite warns above 500 kB).
+  Route-level code splitting can be added in Stage 5 if wanted.
+- The activity rail loads once per visit; the 20-second refresh arrives in
+  Stage 4.
+- `docs/screenshots/` still holds the previous app's images; they are
+  replaced in Stage 5.
+- Restart nothing on the user's side: the test API on 5050 and the Vite server
+  used for checks were stopped (see the final message of the stage).
 
-## Assumptions made
+## Assumptions made (Stage 1)
 
-Stage 5:
-- **Screenshots are kept in the repo** (`docs/screenshots/`, JPEG, about 7 MB)
-  as the record the brief asks for.
-- **"Every screen"** means every route plus the two overlays (Post food form,
-  assign picker); the listing detail is shown for a token with an open request.
-- **Alerts link to a page, not to one item**: notifications store no ids
-  (Part E lists only userId, message, type, isRead, createdAt).
-- **The collection creates its own listing** instead of relying on seed ids,
-  so it can run on any seeded database; it is meant for a test run, then a
-  re-seed before the demo.
-- **The concurrent-approval case** stays covered by the Stage 3/4 Node script;
-  a Postman runner sends one request at a time.
-
-Earlier stages (unchanged):
-- Activity is scoped per role; recipients also see "posted" lines.
-- The feed and badge poll every 20 seconds, only while the app is in front.
-- No activity rail on phones and tablets.
-- Activity and dashboard figures are computed, not stored.
-- The chart shows portions delivered per day.
-- A volunteer can hand back an assigned run; it returns to the admin's list
-  and keeps its portions reserved.
-- Assigning is refused after the pickup deadline.
-- Rejected accounts and the admin get no notifications.
-- Only one admin assigns, so "one live run per request" is a check before
-  create.
-- The seed has ten listings.
+- **Port fidelity:** layouts and copy follow the previous app, with web fixes
+  (real links, skip link, focus moves to the page on navigation, autofill
+  hints, native form submit). The user chose this in the shape question.
+- **Error text colour:** the brief says "chilli red"; it uses `chilli-deep`,
+  the red that passes AA as small text (DESIGN.md 1.4).
+- **Login failures** ("Incorrect email or password") are shown as a slip, as
+  the brief asks for non-field server errors, not as a box above the form.
+- **Re-validation:** `useForm({ mode: 'onBlur', reValidateMode: 'onChange' })`
+  as asked; `useValidatedForm` adds re-checking on change while a field shows
+  an error, because react-hook-form only starts `reValidateMode` after a
+  submit.
+- **Phone rule:** "phone format if the backend checks it": it does
+  (`^[0-9+\- ]{7,15}$`), so the form checks the same pattern.
+- **Email pattern:** a simple `x@y.z` pattern; express-validator's `isEmail`
+  is stricter in rare cases, which then come back as a server field error.
+- **Placeholders:** pages built in later stages show "Built in Stage N"
+  instead of being hidden, so every navigation item works now.
+- **Activity rail in Stage 1:** it loads real events once, since the shell
+  needs it; live refresh is Stage 4.
+- **Fonts self-hosted** through npm instead of a Google Fonts link (works
+  offline at the viva).
+- **Icons:** Phosphor (the `ui-ux-pro-max` default), not emoji.
+- The step dots on the welcome slides change length instantly (widths are
+  never animated); the slide content is the motion.
 
 ## Exact next step to resume
 
-Nothing is left in `PROMPT.md` Part J. Before the viva: `npm run seed`,
-restart the API, follow the README demo script once, and try the approval
-once with the system's reduce-motion setting on to see the gentler path.
+Stage 2 (food listings): run `/impeccable shape` for the recipient counter
+and detail and the donor board / post form / listings; add
+`src/api/foods.js`, `src/validation/postFoodRules.js` (prepared time not in
+the future with 5 minutes of leeway, deadline in the future and after the
+prepared time via `getValues`), the Feed, ListingDetail (side panel from
+600px), Board (chalkboard + post form as a bottom sheet under 600px, a dialog
+above) and ManageListings pages; replace the Stage 2 placeholders in
+`App.jsx`; read `location.state.postFood` / `focusSearch` from the shell's
+action button.
+
+## Final task (only when the user says the project is finished)
+
+Remove every trace of the previous mobile toolkit and the screenshot tooling:
+
+1. Delete `frontend-flutter-old/` (`git rm -r`).
+2. Search the repo (docs, comments, README, CLAUDE.md, PROGRESS.md,
+   PROMPT.md, PRODUCT.md, DESIGN.md, `docs/`) for "Flutter", "Dart", "fl_chart",
+   "go_router", "pubspec" and similar, and rewrite or remove those passages.
+   This includes the CORS comment in `backend/src/app.js` (it is on the CORS
+   line, the one backend change allowed) and the previous app's audit and
+   screenshot files in `docs/`.
+3. Make sure no Playwright setup is in the repo (no `playwright` dependency,
+   config or script); remove the Playwright notes from CLAUDE.md.
+4. Remove project rule 2 from CLAUDE.md once it is satisfied.
