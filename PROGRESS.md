@@ -592,6 +592,20 @@ started and answered, and `npm run build` finished without errors. The test
 servers were stopped. A search of the repo for the old toolkit's names and
 the automation tool's name finds nothing.
 
+## Admin script (after the cleanup, approved by the user)
+
+`backend/scripts/createAdmin.js` (`npm run create-admin`) now takes
+`--name`, `--email`, `--password` and an optional `--phone`. It runs the
+same express-validator rules as `POST /api/auth/register` on them, hashes
+the password with bcrypt (10 rounds, as registration does), and creates one
+approved admin through the User model. An email that already exists stops
+it with nothing changed; a stray or misspelt argument gets a fixed message,
+so the password is never echoed. No API route or registration option was
+added. Tested against `foodloop_test` only (the user's `foodloop` database
+kept its 7 users): bad name, email, password and phone, a stray value,
+success with a mixed-case email (saved lower case), a duplicate, a seeded
+email, and signing in as the new admin through the API.
+
 ## Exact next step to resume
 
 Nothing is planned. Fix whatever the user reports.

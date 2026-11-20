@@ -1,67 +1,102 @@
 // Creates one approved admin account. Admins cannot register through the
-// app (the register route refuses the role), so this script and the seed are
-// the only ways to make one.
+// app (the register route refuses the role) and there is no API route for
+// it, so this script and the seed are the only ways to make one.
 //
 // Usage (from backend/):
-//   npm run create-admin -- "Full Name" admin@example.com "a-strong-password"
-//   npm run create-admin -- "Full Name" admin@example.com "a-strong-password" 9876543210
+//   npm run create-admin -- --name "Admin Name" --email admin2@example.com --password "secret123"
+//   npm run create-admin -- --name "Admin Name" --email admin2@example.com --password "secret123" --phone 9876543210
 //
-// The fourth argument (phone) is optional. The "--" tells npm that what
+// --phone is optional. The "--" after create-admin tells npm that what
 // follows belongs to the script, not to npm itself.
 //
-// Nothing is printed or saved except the account itself: the password is
-// hashed with bcrypt before it reaches the database, and it is never logged.
-require('dotenv').config();
+// Safety:
+// - It only ever adds one user. It never deletes or changes other data.
+// - If the email is already used, it stops and changes nothing.
+// - The password is never printed; only its bcrypt hash is saved.
+require('dotenv').config(); // the same .env (MONGO_URI) the server reads
+const { parseArgs } = require('node:util');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { body, validationResult } = require('express-validator');
 const connectDB = require('../src/config/db');
 const User = require('../src/models/User');
 
-// The same rules the register form uses, so an admin account is never weaker
-// than a normal one.
-function check(name, email, password, phone) {
-  const problems = [];
-  if (!name || name.trim().length < 2) problems.push('Name must be at least 2 characters.');
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) problems.push('Email is not valid.');
-  if (!password || password.length < 6) problems.push('Password must be at least 6 characters.');
-  if (phone && !/^[0-9+\- ]{7,15}$/.test(phone.trim())) problems.push('Phone must be 7 to 15 digits.');
-  return problems;
-}
+const USAGE =
+  'Usage: npm run create-admin -- --name "Admin Name" --email admin@example.com --password "secret123" [--phone 9876543210]';
 
-function usage(problems) {
-  if (problems.length) console.error(problems.map((p) => `  - ${p}`).join('\n'));
-  console.error('\nUsage: npm run create-admin -- "Full Name" email password [phone]');
+// The same express-validator rules as POST /api/auth/register
+// (src/routes/authRoutes.js), so an admin account is never weaker than a
+// normal one. The phone is optional here; the model needs one, so a
+// placeholder is saved when it is left out.
+const rules = [
+  body('name').trim().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
+  body('email').trim().isEmail().withMessage('Enter a valid email').toLowerCase(),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('phone').optional().trim().matches(/^[0-9+\- ]{7,15}$/).withMessage('Enter a valid phone number'),
+];
+
+// Print what is wrong (never the values themselves) and stop.
+function fail(problems) {
+  problems.forEach((p) => console.error(`  - ${p}`));
+  console.error(`\n${USAGE}`);
   process.exit(1);
 }
 
+// Read --name, --email, --password and --phone from the command line.
+function readOptions() {
+  try {
+    const { values } = parseArgs({
+      options: {
+        name: { type: 'string' },
+        email: { type: 'string' },
+        password: { type: 'string' },
+        phone: { type: 'string' },
+      },
+      strict: true, // an unknown or misspelt option is an error
+    });
+    return values;
+  } catch {
+    // The parser's own message can repeat a stray value, which could be the
+    // password, so a fixed message is shown instead.
+    return fail(['Unknown option or a value without its --name / --email / --password / --phone flag.']);
+  }
+}
+
+// Run the registration rules on the options, the way Express would run them
+// on a request body. The sanitizers (trim, lower case) change req.body.
+async function validate(values) {
+  const req = { body: { ...values } };
+  for (const rule of rules) await rule.run(req);
+  const errors = validationResult(req).array().map((e) => e.msg);
+  if (errors.length) fail(errors);
+  return req.body;
+}
+
 async function main() {
-  const [name, email, password, phone] = process.argv.slice(2);
-  if (!name || !email || !password) usage(['Name, email and password are all required.']);
-  const problems = check(name, email, password, phone);
-  if (problems.length) usage(problems);
+  const input = await validate(readOptions());
 
   await connectDB();
 
   // Never overwrite an existing account (it could be someone else's).
-  const cleanEmail = email.trim().toLowerCase();
-  if (await User.exists({ email: cleanEmail })) {
-    console.error(`An account with the email ${cleanEmail} already exists. Nothing was changed.`);
+  if (await User.exists({ email: input.email })) {
+    console.error(`An account with the email ${input.email} already exists. Nothing was changed.`);
     process.exitCode = 1;
     return;
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  // Hashed exactly as in registration (authController.register).
+  const passwordHash = await bcrypt.hash(input.password, 10);
   await User.create({
-    name: name.trim(),
-    email: cleanEmail,
+    name: input.name,
+    email: input.email,
     passwordHash,
     role: 'admin',
-    phone: phone ? phone.trim() : 'Not given', // the model needs a phone
+    phone: input.phone || 'Not given', // the model needs a phone
     organization: 'Campus Admin',
     verificationStatus: 'approved', // an admin is approved from the start
   });
 
-  console.log(`Admin account created for ${cleanEmail}. Sign in with the password you chose.`);
+  console.log(`Admin account created for ${input.email}. Sign in with the password you chose.`);
 }
 
 main()

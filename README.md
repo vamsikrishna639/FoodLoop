@@ -203,15 +203,16 @@ The seeded `admin@foodloop.test` is for the demo. To add a real admin
 account, run this from `backend/` with your own details:
 
 ```
-npm run create-admin -- "Full Name" you@college.edu "a-strong-password"
+npm run create-admin -- --name "Admin Name" --email admin2@example.com --password "secret123"
 ```
 
-A phone number can follow as a fourth argument. The `--` is needed so npm
-passes the values on to the script. The script checks the same rules as the
-register form (name of 2+ characters, a valid email, a password of 6+
-characters), hashes the password with bcrypt, and creates the account as an
-**approved admin**, ready to sign in. It refuses an email that already exists
-and never changes an existing account. It writes to the database in
+Add `--phone 9876543210` if you want a phone number on the account. The `--`
+after `create-admin` is needed so npm passes the flags on to the script. The
+script checks the same rules as registration (name of 2+ characters, a valid
+email, a password of 6+ characters), hashes the password with bcrypt as
+registration does, and creates the account as an **approved admin**, ready to
+sign in. If the email already exists it stops with a message and changes
+nothing; it never deletes or edits other data and never prints the password. It writes to the database in
 `MONGO_URI` (from `.env`), so `npm run seed` would delete this admin too.
 
 Keep these details out of the repository: do not put them in a file that is

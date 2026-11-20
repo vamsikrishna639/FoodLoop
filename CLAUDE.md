@@ -10,7 +10,7 @@ FoodLoop is an MCA mini-project: a campus food-surplus redistribution app. A can
 
 1. **The stack is strictly MERN:** MongoDB, Express, React (Vite, JavaScript), Node. No TypeScript, no Next.js, no Redux. State is React Context + hooks.
 2. **MERN only, everywhere in the project:** no files, folders, dependencies or mentions of the previous mobile toolkit, and no browser-automation setup (no screenshot or end-to-end tool, its config, MCP server or dependency). This covers docs, comments, README, code, `.gitignore` and `package.json`. Any screenshot script lives outside the repo (the session scratchpad), never in `frontend/` or `package.json`.
-3. **The backend is not modified** by frontend work. (CORS needed no change: `app.use(cors())` already allows every origin. The final cleanup only reworded the comment beside it.)
+3. **The backend is not modified** by frontend work. (CORS needed no change: `app.use(cors())` already allows every origin. The final cleanup only reworded the comment beside it. After that, the user approved one change: `scripts/createAdmin.js` takes `--name/--email/--password/--phone` flags and runs the register route's express-validator rules on them. Each backend change needs the user's approval for that request.)
 
 Read these before working:
 
@@ -31,7 +31,7 @@ npm start        # API on http://localhost:5000
 npm run dev      # same, restarts on file changes (node --watch)
 npm run seed     # WIPES the foodloop database, then inserts demo data
 npm run test:api # runs postman/FoodLoop.postman_collection.json with newman (needs the API on :5000)
-npm run create-admin -- "Full Name" email password [phone]   # one approved admin, bcrypt-hashed
+npm run create-admin -- --name "Admin Name" --email a@b.c --password "secret123" [--phone 9876543210]   # one approved admin, bcrypt-hashed
 ```
 
 Frontend (from `frontend/`; needs a `.env` copied from `.env.example`):
