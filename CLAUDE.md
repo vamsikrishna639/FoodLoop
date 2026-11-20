@@ -9,18 +9,18 @@ FoodLoop is an MCA mini-project: a campus food-surplus redistribution app. A can
 ## Project rules (apply in every session)
 
 1. **The stack is strictly MERN:** MongoDB, Express, React (Vite, JavaScript), Node. No TypeScript, no Next.js, no Redux. State is React Context + hooks.
-2. **The finished project contains no files or mentions of the previous mobile toolkit** (the old app in `frontend-flutter-old/`, its Dart files, its docs) **and no Playwright setup.** `frontend-flutter-old/` and the Playwright screenshot tooling are temporary references only, kept until the user says the project is finished; the cleanup is the last task in `PROGRESS.md`. Never add new references to the old toolkit anywhere (docs, comments, README, code). Playwright scripts live outside the repo (the session scratchpad), never in `frontend/` or `package.json`.
-3. **The backend is not modified** during the React rewrite. (The one allowed change, CORS for `http://localhost:5173`, was not needed: `app.use(cors())` already allows every origin.)
+2. **MERN only, everywhere in the project:** no files, folders, dependencies or mentions of the previous mobile toolkit, and no browser-automation setup (no screenshot or end-to-end tool, its config, MCP server or dependency). This covers docs, comments, README, code, `.gitignore` and `package.json`. Any screenshot script lives outside the repo (the session scratchpad), never in `frontend/` or `package.json`.
+3. **The backend is not modified** by frontend work. (CORS needed no change: `app.use(cors())` already allows every origin. The final cleanup only reworded the comment beside it.)
 
 Read these before working:
 
-- `PROMPT.md`: the build brief (scope, data models, business rules, API table, screens). Its scope and design concept still hold; its old frontend-stack parts (the translation note in Part B, and Parts C and I) are replaced by the React stack above. Do not add features outside it.
-- `PROGRESS.md`: which stage is in progress, what is unverified, assumptions made, the exact next step, and the final cleanup task. Update it when a stage or checkpoint ends.
+- `PROMPT.md`: the build brief (scope, data models, business rules, API table, screens, design concept, React stack and folder layout). Do not add features outside it.
+- `PROGRESS.md`: what each stage built, what is unverified, assumptions made, and the record of the final cleanup. Update it when a stage or checkpoint ends.
 - `DESIGN.md`: the "Canteen Token" design system, implemented in `frontend/src/styles/index.css` and `frontend/src/lib/motion.js`.
 - `VALIDATION.md`: every form, its rules and the file that holds them.
 - `PRODUCT.md`: product context used by the `impeccable` skill.
 
-**Current stage:** React rewrite, all 5 stages done (setup, auth, routing; food listings; claims; volunteers, alerts, live refresh, admin; audit, polish, code splitting, screenshots, docs). Waiting for the user to test Stage 5. The only task left is the final cleanup in `PROGRESS.md`, and only when the user says the project is finished.
+**Current stage:** React rewrite, all 5 stages done (setup, auth, routing; food listings; claims; volunteers, alerts, live refresh, admin; audit, polish, code splitting, screenshots, docs). The final cleanup (MERN only) is done: the old app folder and the browser-automation setup are gone. The project is finished.
 
 ## Commands
 
@@ -50,7 +50,7 @@ A second API copy can run beside the user's: `PORT=5050 MONGO_URI='mongodb://127
 
 If port 5173 is busy (the user's own dev server), run the test copy of Vite on another port (`npx vite --port 5174`; the CLI flag overrides `strictPort`'s port). Vite reloads the page the first time it optimises a new dependency, so a check that loads a page right after adding an import can read a stale URL; run it again.
 
-Visual checks (temporary tooling, see rule 2): a Playwright script in the session scratchpad screenshots pages at 360, 768 and 1440 wide in both themes and reports horizontal overflow and console errors. Sign in through the API and put the session in localStorage before loading a page: `foodloop_token` = the raw JWT, `foodloop_theme` = `light` or `dark`, `foodloop_seen_welcome` = `true` (plain strings, not JSON). Re-seeding creates new user ids, so old tokens stop working. `getByText` also finds hidden copies (the auth board panel is `display:none` on phones), so scope locators to `#main`. The installed Chromium build is 1254; launch it with `executablePath`.
+Visual checks (outside the repo, see rule 2): a screenshot script in the session scratchpad captures pages at 360, 768 and 1440 wide in both themes and reports horizontal overflow and console errors. Sign in through the API and put the session in localStorage before loading a page: `foodloop_token` = the raw JWT, `foodloop_theme` = `light` or `dark`, `foodloop_seen_welcome` = `true` (plain strings, not JSON). Re-seeding creates new user ids, so old tokens stop working. `getByText` also finds hidden copies (the auth board panel is `display:none` on phones), so scope locators to `#main`. The installed Chromium build is 1254; launch it with `executablePath`.
 
 Screenshots for the record live in `docs/screenshots/` as `<role>-<screen>-<width>-<theme>.jpg` (21 screens x 3 widths x 2 themes, taken from the React app in Stage 5; phone shots size the window to the page so the fixed bottom bar sits at the bottom; dialog shots are the viewport only). The Stage 5 audit (axe-core on every render, keyboard walk, 200% text) is `docs/stage5-audit.md`; axe-core is in the npx cache, loaded by the scratchpad script, never added to `package.json`.
 

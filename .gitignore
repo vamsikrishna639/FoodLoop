@@ -7,25 +7,13 @@
 node_modules/
 npm-debug.log*
 
-# Build output and tool caches, anywhere in the repo
+# Build output, anywhere in the repo
 build/
-.dart_tool/
+dist/
 
 # Claude Code settings and installed skills (local only)
 .claude/
 
-# Flutter / Dart
-frontend/.dart_tool/
-frontend/build/
-frontend/.flutter-plugins
-frontend/.flutter-plugins-dependencies
-frontend/.idea/
-frontend/*.iml
-frontend/android/.gradle/
-frontend/android/local.properties
-
-# Tools
-.playwright-mcp/
-screenshots/tmp/
+# OS files
 .DS_Store
 Thumbs.db

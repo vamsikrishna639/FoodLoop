@@ -9,7 +9,7 @@ const dashboard = require('./controllers/dashboardController');
 
 const app = express();
 
-app.use(cors());            // allow the Flutter web app (another port) to call us
+app.use(cors());            // allow the React app (another port) to call us
 app.use(express.json());    // parse JSON request bodies
 app.use(morgan('dev'));     // log each request in the terminal
 

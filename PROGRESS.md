@@ -1,15 +1,15 @@
 # FoodLoop — Progress
 
-Updated on 2026-11-20 at the end of React Stage 5.
+Updated on 2026-11-20 after the final cleanup (MERN only).
 
 ## Current stage
 
 The frontend is being rebuilt in **React (Vite, JavaScript)** against the
 existing, unchanged backend. **All five stages are complete, committed
 and pushed to origin.** Stages 1 to 4 were tested and approved by the
-user; waiting for the user to test Stage 5. Each stage is pushed when it is
-committed (after a secret check). The final cleanup (below) waits until
-the user says the project is finished.
+user; Stage 5 is done. Each stage was pushed when it was committed (after a
+secret check). **The final cleanup is done** (see below): the project is
+MERN only and finished.
 
 | Stage | Contents | Status |
 |---|---|---|
@@ -19,8 +19,9 @@ the user says the project is finished.
 | 4 | Volunteer pickups, alerts + badge, live 20s refresh, activity feed, admin overview + Recharts chart, approvals and assign dialog | Done, approved |
 | 5 | Route code splitting, `/impeccable audit` + `polish`, keyboard and contrast checks, screenshots, README demo script, VALIDATION.md, VIVA_NOTES.md | Done |
 
-The backend is complete (all five stages of the original build). It has not
-been changed in the rewrite. CORS: `app.use(cors())` already allows
+The backend is complete (all five stages of the original build). It was not
+changed in the rewrite; the final cleanup only reworded the comment on the
+CORS line in `src/app.js`. CORS: `app.use(cors())` already allows
 `http://localhost:5173`, so the one allowed backend change was not needed.
 
 ## Impeccable setup (before Stage 2)
@@ -189,7 +190,7 @@ database were not touched.
   reject dialog and Profile, in both themes: no horizontal overflow, no
   console errors. Reduced motion: the Overview renders with the number at
   rest.
-- Flows (Playwright script in the session scratchpad):
+- Flows (a browser script in the session scratchpad):
   - Kiran: I've collected it -> "Marked as collected. Now take it over",
     stamp PICKED UP, focus on Mark delivered, the run stays under Assigned;
     Enter -> "Delivered. Thank you for the run", focus on the closing line.
@@ -275,7 +276,7 @@ database were not touched.
   for", My requests (Active, Past), the turn-down and cancel dialogs, at
   360 / 768 / 1440 in both themes: no horizontal overflow, no console
   errors (except the browser logging the expected 400 answers).
-- Flows (Playwright script in the session scratchpad):
+- Flows (a browser script in the session scratchpad):
   - Approve Ananya's 6 sandwiches: slip "Approved 6 packets of Veg Grilled
     Sandwiches", APPROVED stamp drops on that slip only (sampled per frame:
     scale 1.87 -> 0.96 -> 1, settled at about 450ms), focus on its decision
@@ -364,9 +365,6 @@ the user's own dev server, left alone).
 
 ## Done in Stage 1
 
-- **Move:** the previous app moved to `frontend-flutter-old/` with `git mv`
-  (item by item, because the editor held a lock on the folder). Untouched since;
-  reference only.
 - **Setup:** Vite 8 + React 19, React Router 8 (`createBrowserRouter`),
   Tailwind CSS 4.3 (`@tailwindcss/vite`), motion 14, Recharts 3 (installed,
   used in Stage 4), react-hook-form 7, Phosphor icons, self-hosted variable
@@ -404,7 +402,7 @@ the user's own dev server, left alone).
   (`constants.js`, `loginRules.js`, `registerRules.js`, `serverErrors.js`);
   `useValidatedForm` hook; VALIDATION.md written (Stage 2-4 forms listed with
   their backend rules, files added in those stages).
-- **Docs:** CLAUDE.md (with the MERN-only and cleanup rules), README (how to
+- **Docs:** CLAUDE.md (with the MERN-only rule), README (how to
   run both servers), PRODUCT.md (stack), DESIGN.md, VALIDATION.md, this file.
 
 ## Verified in Stage 1
@@ -414,7 +412,7 @@ seeded); the user's database on 5000 was not touched. Vite was pointed at it
 with `VITE_API_URL=http://localhost:5050/api`.
 
 - `npm run build` succeeds.
-- Screenshots (Playwright script in the session scratchpad) of welcome, sign
+- Screenshots (a browser script in the session scratchpad) of welcome, sign
   in, register, pending, profile, gallery, each role's home and the alerts
   placeholder at 360, 768 and 1440 in both themes: **no horizontal overflow and
   no console errors** at any size.
@@ -484,7 +482,7 @@ fixed until the next blur (now re-checked on change while shown).
   colour.
 - **The old `docs/stage5-audit.md`** (the previous app's audit) was
   replaced with the React audit; the screenshots were replaced as well.
-- **VIVA_NOTES.md:** sections 1-4 kept as written (only "Flutter app"
+- **VIVA_NOTES.md:** sections 1-4 kept as written (only the app's name
   changed to the React app); sections 5-6 rewritten for the React code;
   sections 7-10 added.
 
@@ -570,24 +568,30 @@ fixed until the next blur (now re-checked on change while shown).
 - The step dots on the welcome slides change length instantly (widths are
   never animated); the slide content is the motion.
 
+## Final cleanup (done on 2026-11-20)
+
+The project is MERN only. Removed:
+
+- the previous app's folder (all of it, from git and from disk);
+- the project's MCP config file (it only configured the browser-automation
+  MCP server) and that server's untracked output folder (logs and old
+  screenshots);
+- the old toolkit's lines in `.gitignore`, and its tech stack, architecture,
+  translation note and build-stage wording in PROMPT.md (now rewritten for the
+  React stack: Parts B, C, I and J);
+- the temporary-reference rule and the cleanup task in CLAUDE.md and this file;
+- the old toolkit's name in the CORS comment in `backend/src/app.js` (the only
+  backend line changed).
+
+Kept: `docs/screenshots/` and `docs/stage5-audit.md` (both from the React app).
+No `package.json` or lockfile had a browser-automation dependency.
+
+Checked after the cleanup: `npm install` in both folders, a test API on port
+5050 with its own database (`foodloop_test`) and a test Vite server both
+started and answered, and `npm run build` finished without errors. The test
+servers were stopped. A search of the repo for the old toolkit's names and
+the automation tool's name finds nothing.
+
 ## Exact next step to resume
 
-Wait for the user to test Stage 5 (and to run `/review-animations` if
-they want the motion review). Fix whatever they report. Then, only when the
-user says the project is finished, do the final task below.
-
-## Final task (only when the user says the project is finished)
-
-Remove every trace of the previous mobile toolkit and the screenshot tooling:
-
-1. Delete `frontend-flutter-old/` (`git rm -r`).
-2. Search the repo (docs, comments, README, CLAUDE.md, PROGRESS.md,
-   PROMPT.md, PRODUCT.md, DESIGN.md, `docs/`) for "Flutter", "Dart", "fl_chart",
-   "go_router", "pubspec" and similar, and rewrite or remove those passages.
-   This includes the CORS comment in `backend/src/app.js` (it is on the CORS
-   line, the one backend change allowed). (The previous app's audit and
-   screenshots in `docs/` were already replaced with the React ones in
-   Stage 5; VIVA_NOTES.md was rewritten for React then too.)
-3. Make sure no Playwright setup is in the repo (no `playwright` dependency,
-   config or script); remove the Playwright notes from CLAUDE.md.
-4. Remove project rule 2 from CLAUDE.md once it is satisfied.
+Nothing is planned. Fix whatever the user reports.

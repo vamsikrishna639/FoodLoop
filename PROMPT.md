@@ -1,6 +1,6 @@
 # FoodLoop — Build Prompt
 
-You are building **FoodLoop**, a smart food waste reduction and redistribution app for an MCA mini-project. A college canteen (donor) posts surplus food, registered recipients request it, volunteers collect and deliver it, and an admin manages everything.
+You are building **FoodLoop**, a smart food waste reduction and redistribution web app for an MCA mini-project, on the MERN stack (MongoDB, Express, React, Node). A college canteen (donor) posts surplus food, registered recipients request it, volunteers collect and deliver it, and an admin manages everything.
 
 The backend logic is intentionally simple (no payments, no GPS, no SMS, no cloud deployment, no AI). Because of that, **the UI/UX is the main way this project impresses**. It must look designed by a person with taste, not like a default AI-generated dashboard. Read the whole prompt before starting.
 
@@ -30,15 +30,15 @@ This is the creative concept. It wins over any generic default, including sugges
 - Text: chalk white `#ECE8DF`, secondary `#A9A397`
 - Same accents, slightly brightened for contrast
 
-### Typography (via `google_fonts`)
+### Typography (self-hosted with `@fontsource-variable/*`, no Google Fonts request)
 - Display and headings: **Bricolage Grotesque** (bold, characterful)
 - Body and UI text: **Instrument Sans**
 - Token numbers, times, quantities and receipts: **JetBrains Mono** (gives the "printed slip" feel)
 - Use a strong type scale with big contrast between headline sizes and body text. Large editorial numbers for impact stats.
 - **Do not** use Inter, Roboto, Poppins or Montserrat.
 
-### Signature components (build these as reusable widgets)
-1. **TokenCard** — the food listing card. Shaped like a canteen token slip: notched semicircle cut-outs on both sides (use a `CustomClipper`), a dotted perforation line separating the top (food title, donor, food-type marker) from the bottom stub (token number like `#FL-0042` in mono, quantity, deadline). Subtle paper texture or grain is optional; keep it light.
+### Signature components (build these as reusable React components)
+1. **TokenCard** — the food listing card. Shaped like a canteen token slip: notched semicircle cut-outs on both sides (use a CSS mask), a dotted perforation line separating the top (food title, donor, food-type marker) from the bottom stub (token number like `#FL-0042` in mono, quantity, deadline). Subtle paper texture or grain is optional; keep it light.
 2. **PortionMeter** — instead of a generic progress bar, show available portions as a row of small plate or box icons that fill as they are reserved (collapse to "18 / 20" text when the count is large).
 3. **DeadlineClock** — a small circular ring countdown to pickup deadline, like a kitchen timer. Ink by default, turmeric under 1 hour, chilli red under 15 minutes, crossed-out "EXPIRED" stamp after.
 4. **StatusStamp** — statuses shown as rubber stamps: uppercase mono text inside a rounded rectangle border, rotated about -6 degrees, slightly uneven opacity. Colors: AVAILABLE (green), RESERVED (turmeric), APPROVED (green), REJECTED (red), PICKED UP (ink), DELIVERED (green, double border), EXPIRED (grey, crossed).
@@ -57,15 +57,15 @@ Create one `ResponsiveShell` with three breakpoints:
 
 ### Motion (follow Emil Kowalski's principles)
 - Motion must have a purpose: confirm an action, show where something came from, or draw attention to change. If it does none of those, don't animate.
-- Keep most transitions 150–250ms with ease-out curves (e.g. `Curves.easeOutCubic` or a custom `Cubic`). No bouncy springs on everyday UI.
-- **Signature moment:** when a donor approves a claim, the APPROVED stamp drops onto the token with a quick scale-down and slight rotation settle, plus a light haptic on mobile. Use it only here, so it stays special.
-- Hero transition from TokenCard to listing detail.
-- Staggered fade-up for list items on first load only, not on every rebuild.
-- Respect reduced motion: check `MediaQuery.of(context).disableAnimations` and skip non-essential animation.
+- Keep most transitions 150–250ms with ease-out curves (one shared `cubic-bezier` ease-out, used by CSS and the `motion` library). No bouncy springs on everyday UI.
+- **Signature moment:** when a donor approves a claim, the APPROVED stamp drops onto the token with a quick scale-down and slight rotation settle. Use it only here, so it stays special.
+- On phones, the TokenCard flies into the listing detail page (View Transitions API).
+- Staggered fade-up for list items on first load only, not on every re-render.
+- Respect reduced motion (`prefers-reduced-motion`, `useReducedMotion()`): drop movement and scale, keep only short fades.
 
 ### Other UX details
 - Skeleton loaders shaped like TokenCards, not spinners.
-- Empty states with warm, specific copy and a simple illustration drawn with Flutter shapes or icons (e.g. "The counter's clear. Check back after lunch service.").
+- Empty states with warm, specific copy and a simple illustration drawn with inline SVG or icons (e.g. "The counter's clear. Check back after lunch service.").
 - Error states with a retry button.
 - Success and error feedback via snackbars styled like a small printed slip.
 - Food-safety notice on listing detail: a small note reminding recipients to check freshness and allergens, and that a deadline alone doesn't guarantee food is safe.
@@ -79,24 +79,26 @@ Do not use: purple/blue gradients, glassmorphism, neon glows, generic hero secti
 
 ## PART B — Use the installed skills in this order
 
-1. **ui-ux-pro-max** — Before writing UI code, use it to build a complete design system (color tokens, type scale, spacing, radii, elevation, component states) for this concept and the Flutter stack. Treat Part A as a fixed brief: use the skill to refine, complete and check it, not to replace it with a different style. Save the result as `DESIGN.md` in the repo root and implement it in `frontend/lib/core/theme/`.
+1. **ui-ux-pro-max** — Before writing UI code, use it to build a complete design system (color tokens, type scale, spacing, radii, elevation, component states) for this concept and the React stack. Treat Part A as a fixed brief: use the skill to refine, complete and check it, not to replace it with a different style. Save the result as `DESIGN.md` in the repo root and implement it as CSS custom properties and Tailwind `@theme` tokens in `frontend/src/styles/index.css`, with the motion values in `frontend/src/lib/motion.js`.
 2. **impeccable** — Run `/impeccable shape` before building each major screen to plan its hierarchy and responsive layout. Run `/impeccable critique` after each screen is built and fix what it finds. At the end of Stage 5, run `/impeccable audit` and `/impeccable polish` across the whole app.
 3. **emil-design-eng** (and Emil's related animation skills) — Follow it for every animation and interaction decision. At the end, run **review-animations** on the app and fix its findings.
 
-**Important — Flutter translation:** impeccable and Emil's skills use web (HTML/CSS/React) examples. This is a Flutter project. Apply their principles (hierarchy, typography, spacing, color, easing, duration, restraint), but implement them with Flutter APIs: `ThemeData`, `ColorScheme`, `TextTheme`, `ThemeExtension` for custom tokens, `CustomClipper`, `CustomPainter`, `AnimationController`, implicit animations, `Hero`, `PageRouteBuilder`. Never add web/CSS code to the Flutter project.
-
-**Visual verification:** After building each screen, run the Flutter web build and use the **Playwright MCP** to take screenshots at 360px, 768px and 1440px widths. Look at them, fix overflow, spacing or alignment problems, and confirm the screen matches the Canteen Token concept. Use the **Dart MCP** to analyze and fix Dart errors and warnings.
+**Visual verification:** After building each screen, run the Vite dev server and check the screen at 360px, 768px and 1440px widths in both themes. Fix overflow, spacing or alignment problems, and confirm the screen matches the Canteen Token concept. `npm run build` must finish without errors.
 
 ---
 
 ## PART C — Tech stack
 
-**Frontend: Flutter (Dart), targeting Android and Web**
-- State: `provider`
-- Routing: `go_router` with role-based redirects
-- HTTP: `http`; token storage: `flutter_secure_storage` (with `shared_preferences` fallback on web)
-- `google_fonts`, `fl_chart` (styled to match the concept, not default chart colors), `intl`
-- Material 3 as the base, heavily customized through the theme
+The stack is strictly MERN. No TypeScript, no Next.js, no Redux.
+
+**Frontend: React (Vite, JavaScript), in the browser**
+- State: React Context + hooks
+- Routing: `react-router` (`createBrowserRouter`) with role-based gates; every page loaded with `React.lazy`
+- HTTP: one `fetch` wrapper; the token in `localStorage`
+- Forms: `react-hook-form`, with the rules in separate files
+- Styling: Tailwind CSS v4 with the design tokens in `@theme`; Tailwind's default palette removed
+- Motion: `motion` (Framer Motion) plus CSS transitions
+- `recharts` (styled to match the concept, not default chart colors), `@phosphor-icons/react`, `@fontsource-variable/*`
 
 **Backend: Node.js + Express.js + MongoDB (Mongoose)**
 - JWT + bcrypt auth, express-validator, cors, dotenv, morgan
@@ -200,26 +202,29 @@ Seed script (`npm run seed`): one admin, one approved donor ("Main Block Canteen
 ## PART I — Frontend architecture
 
 ```
-lib/
-  core/      theme (tokens, ThemeExtension), router, api client, responsive helpers
-  models/
-  services/
-  providers/
-  screens/   auth, recipient, donor, volunteer, admin, common
-  widgets/   TokenCard, PortionMeter, DeadlineClock, StatusStamp, ReceiptTimeline,
-             ImpactNumber, VegMarker, ResponsiveShell, EmptyState, SkeletonToken
+src/
+  api/         client.js (the only HTTP entry point) and one file per resource
+  context/     AuthContext, ThemeContext, ToastContext, LiveContext
+  hooks/       data and form hooks (useListings, useClaims, useValidatedForm ...)
+  lib/         plain helpers (roles, format, listing, claim, motion, storage)
+  routes/      Gate.jsx (PublicOnly, PendingOnly, RequireApproved)
+  pages/       auth, recipient, donor, volunteer, admin, common
+  components/  TokenCard, PortionMeter, DeadlineClock, StatusStamp, ReceiptTimeline,
+               ImpactNumber, VegMarker, ResponsiveShell, EmptyState, SkeletonToken
+  validation/  form rules, one file per form
+  styles/      index.css (design tokens, Tailwind @theme)
 ```
 - One API client that attaches the JWT, logs out on 401 and parses `{ success, message, data }`.
-- API base URL in one config file (note `10.0.2.2` for Android emulator, `localhost` for web).
+- API base URL in one config file (`src/config.js`, read from `VITE_API_URL` in `frontend/.env`, default `http://localhost:5000/api`).
 - Restore the session on app start.
-- No hard-coded colors or text styles in widgets; everything comes from the theme.
+- No hard-coded colors or text styles in components; everything comes from the design tokens.
 
 ---
 
 ## PART J — Build stages
 
-1. **Design system and setup:** run ui-ux-pro-max, write DESIGN.md, implement the theme and all signature widgets in a simple "component gallery" screen I can view in Chrome. Backend scaffold, MongoDB connection, auth, role middleware, seed script. Login, register, pending screens, ResponsiveShell and router.
+1. **Design system and setup:** run ui-ux-pro-max, write DESIGN.md, implement the tokens and all signature components in a simple "component gallery" page (`/gallery`). Backend scaffold, MongoDB connection, auth, role middleware, seed script. Login, register, pending screens, ResponsiveShell and router.
 2. **Food listings:** listing CRUD with validation and expiry handling; recipient feed and detail; donor post and manage screens.
 3. **Claim workflow:** atomic reservation, approve/reject/cancel, transition validation; stamp animation; My Requests with ReceiptTimeline.
 4. **Volunteers, notifications, dashboards:** pickup assignment and status, notifications, activity feed, role dashboards and chart, admin approvals.
-5. **Testing and polish:** Thunder Client/Postman collection (exported JSON) including negative tests (over-allocation, wrong role, invalid transition); Playwright screenshots at all three widths for every screen; dark mode check; `/impeccable audit` + `/impeccable polish`; review-animations; README with setup steps, test logins and a demo script for one full donor → recipient → volunteer → delivered flow.
+5. **Testing and polish:** Thunder Client/Postman collection (exported JSON) including negative tests (over-allocation, wrong role, invalid transition); screenshots at all three widths for every screen; dark mode check; accessibility audit; route code splitting; `/impeccable audit` + `/impeccable polish`; review-animations; README with setup steps, test logins and a demo script for one full donor → recipient → volunteer → delivered flow.
