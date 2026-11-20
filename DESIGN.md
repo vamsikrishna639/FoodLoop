@@ -359,6 +359,7 @@ One `ResponsiveShell`, three breakpoints, mobile first. Tailwind's own
 |---|---|---|---|
 | (none) | `< 600` | Bottom bar (68px) with a raised centre action | One column; forms are bottom sheets |
 | `tablet:` | `>= 600` | Dark navigation rail (92px), icons over labels | Two columns; detail opens as a side panel |
+| `register:` | `>= 640` | — | Only the admin's Approvals: a table instead of stacked slips |
 | `split:` | `>= 900` | — | Sign-in, register and welcome split into chalkboard + paper |
 | `desktop:` | `> 1024` | Menu-board sidebar (248) | Main area + activity rail (304); max width 1320, left-aligned; dialogs |
 

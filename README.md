@@ -26,8 +26,8 @@ The backend is complete. The React frontend is being built in five stages.
 | 1 | Setup, design tokens, component gallery, sign in / register / waiting page, role-based routing, responsive shell | Done |
 | 2 | Food listings: recipient counter and detail, donor board, post / edit / delete | Done |
 | 3 | Claims: request, approve (stamp drop), turn down, cancel; My requests | Done |
-| 4 | Volunteer pickups, alerts, dashboards and chart, admin approvals and assignment | Next |
-| 5 | Polish, audit, screenshots | Planned |
+| 4 | Volunteer pickups, alerts and the 20-second refresh, activity feed, admin overview with chart, approvals and assignment | Done |
+| 5 | Polish, audit, screenshots | Next |
 
 What works in the browser today:
 
@@ -42,8 +42,13 @@ What works in the browser today:
   their account slip and a **Check again** button.
 - **Signed-in frame per role:** a bottom bar with a raised action on phones,
   a dark rail on tablets, a menu-board sidebar plus the **Activity** rail on
-  desktops. Each role sees only its own pages; the pages that later stages
-  fill in show a short "Built in Stage N" note.
+  desktops. Each role sees only its own pages.
+- **Live updates:** every 20 seconds, while the tab is visible, the app asks
+  again for the bell's unread count, the Activity rail and the list the page
+  shows (the donor's requests, the recipient's counter and receipts, the
+  volunteer's runs, the admin's queue). A hidden tab stops asking and
+  catches up as soon as it is shown again. New Activity lines fade in at
+  the top.
 - **Recipient, Today's Counter:** every open or reserved token, soonest
   deadline first, with search (dishes or pickup places), Veg / Non-veg /
   Mixed / Closing soon tags and a token count. Phones open a token as its
@@ -75,6 +80,28 @@ What works in the browser today:
 - **Listings** (donor: their own; admin: "All listings"): Open and Closed
   tabs, each token with **Edit** (open ones) and **Delete** (only when no
   portion is reserved, after a confirmation).
+- **Volunteer, Pickups:** Assigned / On the way / Delivered tags; each run
+  is a printed pickup slip (carry, from, to, phone, pickup by, assigned,
+  picked up, delivered) with one large button for the next step:
+  **I've collected it**, then **Mark delivered**. **Can't do this run**
+  hands it back (asks first). A run moved on during the visit stays where
+  it was, with its new stamp. A note warns when the counter closes within
+  the hour. Portions carried, as a big figure beside the runs when there is
+  room.
+- **Alerts** (every role): notifications grouped by day, unread ones with a
+  red dot, the word NEW and bold text; selecting one marks it read and opens
+  the page it is about (a recipient's approval opens My requests).
+  **Mark all read**. The unread count is a badge on the bell in the bottom
+  bar, rail and sidebar.
+- **Admin, Overview:** the portions delivered (counted only once
+  delivered) with the 7-day bar chart (today in red, the value printed
+  above each bar), then **Needs a volunteer**: approved requests with no
+  run yet, each with **Assign volunteer** (a dialog listing the approved
+  volunteers, quietest first), and a printed "Right now" tally with a link
+  to the accounts waiting.
+- **Admin, Approvals:** Waiting and Decided tags; a table from a 640px wide
+  window (stacked slips on phones) with **Approve** and **Reject** (asks
+  first). Decisions stay in place, stamped, for the visit.
 - **Profile:** the member slip, the paper / chalkboard theme switch (saved in
   the browser) and Sign out.
 - **Component gallery** at `/gallery`, open without signing in.
@@ -338,22 +365,26 @@ frontend/
     App.jsx           every route and the gate that guards it
     config.js         reads VITE_API_URL
     api/              client.js (the one fetch wrapper) and one file per resource
-    context/          AuthContext, ThemeContext, ToastContext (slip messages)
+    context/          AuthContext, ThemeContext, ToastContext (slip messages),
+                      LiveContext (the one 20-second refresh and the notifications)
     routes/Gate.jsx   who may open which page (signed out, pending, role)
     hooks/            useValidatedForm (react-hook-form settings), useMediaQuery,
                       useFeed (the counter's list and filters), useListings,
-                      useClaims (requests), useFocusWhen
+                      useClaims (requests), useLiveList (a list that refreshes
+                      itself), useFocusWhen
     validation/       the rules for each form, shared constants, server errors
     lib/              motion tokens, formatting, roles and navigation, storage,
-                      facts about a listing (listing.js) and a request (claim.js)
+                      facts about a listing (listing.js), a request (claim.js)
+                      and a notification (notification.js)
     components/       TokenCard, StatusStamp, StampDrop, PortionMeter, DeadlineClock,
                       ReceiptTimeline, ImpactNumber, VegMarker, Chalkboard,
-                      ResponsiveShell, ActivityRail, Field, Button and the rest
+                      ResponsiveShell, ActivityRail, DeliveriesChart (Recharts),
+                      Field, Button and the rest
     pages/            auth (login, register, pending), common (welcome, profile,
                       gallery), recipient (Counter, ListingDetail, RequestFood,
                       CancelRequest, MyRequests), donor (Board, RequestQueue,
-                      ListingForm, ManageListings); volunteer and admin pages
-                      arrive in Stage 4
+                      ListingForm, ManageListings), volunteer (Pickups), admin
+                      (Overview, AssignVolunteer, Approvals), common (Alerts)
     styles/index.css  the design tokens (CSS variables), Tailwind theme,
                       type scale and the paper shapes
 ```

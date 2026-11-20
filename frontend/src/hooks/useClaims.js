@@ -7,35 +7,22 @@
 //   claims.upsert(claim)   put a saved claim in the list (new ones first)
 //   claims.openFor(id)     the recipient's pending/approved request for a listing
 //   claims.load()          read the list again
-import { useCallback, useEffect, useState } from 'react';
+//
+// The list refreshes itself every 20 seconds while the page is open
+// (useLiveList), so a new request appears on the donor's Board, and an
+// approval on the recipient's receipts, without a reload.
+import { useCallback } from 'react';
 import { incoming as loadIncoming, mine } from '../api/claims';
 import { isOpenRequest, listingIdOf } from '../lib/claim';
+import useLiveList from './useLiveList';
 
 export default function useClaims({ incoming = false } = {}) {
-  const [items, setItems] = useState(null);
-  const [error, setError] = useState(null);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      const data = incoming ? await loadIncoming() : await mine();
-      setItems(data.claims);
-    } catch (err) {
-      setError(err.message);
-    }
+  const fetchClaims = useCallback(async () => {
+    const data = incoming ? await loadIncoming() : await mine();
+    return data.claims;
   }, [incoming]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const upsert = useCallback((claim) => {
-    setItems((current) => {
-      if (!current) return [claim];
-      const exists = current.some((c) => c.id === claim.id);
-      return exists ? current.map((c) => (c.id === claim.id ? claim : c)) : [claim, ...current];
-    });
-  }, []);
+  const { items, error, load, upsert } = useLiveList(fetchClaims);
 
   // Rule 7: a recipient has at most one open request per listing.
   const openFor = useCallback(

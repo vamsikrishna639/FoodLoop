@@ -7,6 +7,7 @@
 // arrives after a newer one started is ignored.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { list } from '../api/foods';
+import { useLiveBeat } from '../context/LiveContext';
 
 const STATUSES = 'available,fully_reserved';
 
@@ -45,6 +46,10 @@ export default function useFeed() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // And every 20 seconds while the tab is visible, so "portions left" and
+  // new tokens keep up with the canteen (context/LiveContext.jsx).
+  useLiveBeat(load);
 
   /** Tapping the selected type again clears it. */
   const toggleFoodType = (type) => setFoodType((current) => (current === type ? null : type));

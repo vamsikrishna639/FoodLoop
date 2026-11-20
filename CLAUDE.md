@@ -20,7 +20,7 @@ Read these before working:
 - `VALIDATION.md`: every form, its rules and the file that holds them.
 - `PRODUCT.md`: product context used by the `impeccable` skill.
 
-**Current stage:** React rewrite, Stages 1 to 3 of 5 done (setup, auth, routing; food listings; claims). Next is Stage 4 (volunteers, notifications, dashboards, admin).
+**Current stage:** React rewrite, Stages 1 to 4 of 5 done (setup, auth, routing; food listings; claims; volunteers, alerts, live refresh, admin). Next is Stage 5 (audit, polish, screenshots, docs).
 
 ## Commands
 
@@ -94,7 +94,6 @@ Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `
 - The token, theme and welcome flag are in localStorage (`src/lib/storage.js`, every access in try/catch). `index.html` applies the saved theme before the first paint.
 - `src/lib/roles.js` holds the roles, each role's allowed paths (`canOpen`) and navigation (`destinationsFor`). A new shell page needs: its path in `ALLOWED`, a destination if it is in the navigation, and a route under the shell in `App.jsx`.
 - `src/components/ResponsiveShell.jsx` is the single frame for signed-in pages: bottom bar under 600px, dark rail from 600 to 1024, sidebar plus `ActivityRail` above. The layouts switch with CSS breakpoints, not JavaScript. The page cross-fades on navigation (opacity only) and focus moves to `#main`. The role's action (`Post food` / `Browse`) navigates to `/home` with `location.state.postFood` / `focusSearch` (a timestamp); the Stage 2 pages read it.
-- Pages that later stages build are `Placeholder` ("Built in Stage N"); replace each with the real page in its stage.
 - The home route is `/home/*`. `HomeForRole` picks the page; the recipient's `Counter` (`pages/recipient/Counter.jsx`) reads the rest of the path (`listing/<id>`), so it stays mounted while the URL moves between the list and a token and keeps its list and filters (`hooks/useFeed.js`). Below 600px an open token is its own page (`ListingPage`, the card flies there with `viewTransition` and `view-transition-name: token-<id>`); from 600px it is the side panel, and selecting replaces the URL. The shell's page fade is keyed by the first path segment, so `/home` and `/home/listing/x` are one page.
 - Donor pages (`pages/donor/`): `Board` (chalkboard + tally; the tally moves beside the board only when its container is at least 900px wide, an `@container` query), `ManageListings` (also the admin's "All listings"), and `ListingForm` (post and edit). Listing data comes from `hooks/useListings.js` (`upsert`, `removeById` after a save or delete). Facts about a listing (`available`, `isOpen`, `isClosingSoon`, `stampOf`, `donorName`) are in `lib/listing.js`.
 - Claims (Stage 3): `api/claims.js`, `lib/claim.js` (facts about a request: `isOpenRequest`, `isActive`, `canCancel`, `claimStamp` (APPROVED moves on to the pickup's status), `nextStep`), `hooks/useClaims.js` (`useClaims()` = `/claims/mine`, `useClaims({ incoming: true })` = the donor's queue; `upsert`, `openFor(listingId)`). The recipient's request area is `pages/recipient/RequestFood.jsx` inside `ListingDetailView` (the Counter owns one `useClaims()` and passes it down); `CancelRequest.jsx` is the shared confirm. The donor's queue is `pages/donor/RequestQueue.jsx` on the Board (under the chalkboard, then the tally); it plays `StampDrop` only for `dropId` and keeps slips decided this visit in place. My requests is `pages/recipient/MyRequests.jsx` (one list; two columns by `@container`, every second item lowered with a transform).
@@ -108,14 +107,18 @@ Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `
 - Fields: `TextField`, `TextArea`, `PasswordField`, `FieldShell`, `FieldError`, `FormNotice` in `components/Field.jsx`. React 19 passes `ref` as a prop, so `register()`'s ref reaches the input without `forwardRef`.
 - Icons are `@phosphor-icons/react`, using the `*Icon` names (`BellIcon`), always `aria-hidden` beside a text label.
 - Fonts are self-hosted with `@fontsource-variable/*` (no Google Fonts request).
-- The live 20-second refresh (notifications badge and activity rail, paused while the tab is hidden) comes in Stage 4; keep any periodic refresh in one place then.
+- Live refresh (Stage 4): `context/LiveContext.jsx` (`LiveProvider`, mounted around the shell in `App.jsx`) holds the ONLY timer: a beat every 20s (`BEAT_MS`), stopped while `document.hidden`, with an immediate catch-up when the tab is shown. It also holds the notifications (`useNotifications()`: `items`, `unread`, `markRead` (optimistic), `markAllRead`). A page joins with `useLiveBeat(load)` (runs on each beat, not on mount). Lists use `hooks/useLiveList.js` (`items`, `error`, `load`, `upsert`, `updatedAt`), which drops a reply that started before a local `upsert` or that is not the newest; `useClaims` is built on it, `useListings` has the same guard. Never add another `setInterval` for data.
+- The bell badge reads `useNotifications().unread` in `ResponsiveShell`. The `ActivityRail` is mounted only from 1025px (`useMediaQuery`), so phones never fetch it; new lines fade in, and a separate `sr-only` live region reads only the new lines (never put `aria-live` on the whole list).
+- Volunteer (`pages/volunteer/Pickups.jsx`): `RunTabs` (Assigned / On the way / Delivered as one strip, fits 360), each run a `ReceiptTimeline` pickup slip (Pickup by second), one 56px ink button per step, "Can't do this run" asks first. Runs moved on this visit stay in their tab (`movedHere`); old handed-back runs are hidden. Tally (`ImpactNumber`) beside from an 820px container.
+- Alerts (`pages/common/Alerts.jsx`, `lib/notification.js` `alertWord`, `alertTarget(type, role)`): grouped by day; a line is a link when it leads somewhere, a button while unread, plain text otherwise.
+- Admin: `pages/admin/Overview.jsx` (queue first when requests were waiting at load, decided once; `ImpactBlock` with the lazily loaded `components/DeliveriesChart.jsx` (Recharts, `lazy()` so it is a separate chunk); `RightNow` receipt), `AssignVolunteer.jsx` (radio rows, quietest preselected, `validation/assignRules.js`), `Approvals.jsx` (a real `<table>` from the `register:` breakpoint, 640px window; slips below; Reject asks first). API files: `api/pickups.js`, `api/users.js`, `api/notifications.js`.
 
 ## Design rules that are easy to break
 
 - No hex colours outside `src/styles/index.css`. Use the Tailwind names from `@theme` (`bg-paper`, `text-ink`, `text-ink-soft`, `border-line`, `bg-chilli-deep` ...); Tailwind's default palette is removed. Inline SVG may use `var(--fl-...)`.
 - Use `chilli-deep` for red text and red button fills; `chilli` fails AA there and is for large display, rings and borders. Turmeric is a fill only; text uses `turmeric-deep`. The slip toast's marks use `slip-done` / `slip-error`.
 - Type comes from the utilities `t-display-lg` ... `t-mono-sm`, `t-stamp`, `t-impact` (they set family, size, weight, line height, tracking). `t-mono-sm` is uppercase.
-- Breakpoints are `tablet:` (600), `split:` (900, the auth/welcome split) and `desktop:` (1025). There is no `sm:`/`md:`/`lg:`.
+- Breakpoints are `tablet:` (600), `register:` (640, only the Approvals table), `split:` (900, the auth/welcome split) and `desktop:` (1025). There is no `sm:`/`md:`/`lg:`.
 - The chalkboard (`bg-board`, `text-chalk`, class `on-board` for chalk focus rings) stays dark in both themes: sidebar, rail, the auth panel, the donor's "Today's Surplus".
 - Status is always a `StatusStamp` with a word, never colour alone.
 - Token slips: `.slip` (outline via drop-shadows, `--edge` colour, `--stub` height) around `.slip-paper` (the notch mask). Hover adds `slip-lifted`; the role picker's choice uses `slip-selected`. `TokenCard` must look complete with an empty `imageUrl`.
@@ -125,4 +128,5 @@ Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `
 - `ImpactNumber` counts up from 0 once per caption per session, then starts from the last value it showed; `forgetImpactNumbers()` runs on sign-out.
 - Layouts are left-aligned and differ per role. The banned patterns are in `PROMPT.md` Part A and DESIGN.md section 10.
 - Tap targets are at least 48px (`min-h-12`, `size-12`). Use `min-h-*` rather than fixed heights on anything holding text.
+- Red (`accent`) buttons are for the one main action of a form or for actions that cost something (Turn down, Reject, Hand back). Completing a step (Mark delivered) is ink.
 - Disabled buttons are a sunken paper slot (`border-control bg-sunken text-ink-soft`), never a faded fill. While `loading`, `Button` keeps its real colour.

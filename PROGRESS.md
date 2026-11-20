@@ -1,22 +1,22 @@
 # FoodLoop — Progress
 
-Updated on 2026-11-20 at the end of React Stage 3.
+Updated on 2026-11-20 at the end of React Stage 4.
 
 ## Current stage
 
 The frontend is being rebuilt in **React (Vite, JavaScript)** against the
-existing, unchanged backend. **Stages 1 to 3 of 5 are complete, committed
-and pushed to origin.** Stages 1 and 2 were tested and approved by the
-user; waiting for the user to test Stage 3. Each stage is pushed when it is
+existing, unchanged backend. **Stages 1 to 4 of 5 are complete, committed
+and pushed to origin.** Stages 1 to 3 were tested and approved by the
+user; waiting for the user to test Stage 4. Each stage is pushed when it is
 committed (after a secret check).
 
 | Stage | Contents | Status |
 |---|---|---|
 | 1 | Setup, design tokens, component gallery, auth + routing, responsive shell | Done, approved |
 | 2 | Food listings: recipient counter + detail, donor board, post / edit / delete, Listings | Done, approved |
-| 3 | Claims: request form, approve with stamp drop, turn down, cancel, My requests receipts | Done |
-| 4 | Volunteer pickups, alerts + badge, live activity refresh, dashboards + Recharts chart, admin approvals and assign dialog | Next |
-| 5 | `/impeccable audit` + `polish`, `review-animations`, screenshots, VALIDATION.md complete, README | Planned |
+| 3 | Claims: request form, approve with stamp drop, turn down, cancel, My requests receipts | Done, approved |
+| 4 | Volunteer pickups, alerts + badge, live 20s refresh, activity feed, admin overview + Recharts chart, approvals and assign dialog | Done |
+| 5 | `/impeccable audit` + `polish`, `review-animations`, screenshots, VALIDATION.md complete, README | Next |
 
 The backend is complete (all five stages of the original build). It has not
 been changed in the rewrite. CORS: `app.use(cors())` already allows
@@ -31,6 +31,104 @@ hook was installed (`impeccable hooks on`: `.impeccable/config.json` is
 committed; the consent file and `.claude/settings.local.json` are
 git-ignored). Doctor now reports nothing. Impeccable was not updated (the
 user said not to).
+
+## Done in Stage 4
+
+`/impeccable shape` asked one question (does the Approvals table start at
+640px of the window or of the content area); the user chose **the window**
+(a named `register:` breakpoint, 640px).
+
+- **Live refresh** (`context/LiveContext.jsx`): the one timer in the app, a
+  beat every 20 seconds, stopped while the tab is hidden and caught up the
+  moment it is shown again. It refreshes the notifications (bell badge) and
+  every list that joins with `useLiveBeat`: the activity rail, the donor's
+  board, tally and request queue, the recipient's counter and receipts, the
+  volunteer's runs, the admin's queue, figures and accounts.
+  `hooks/useLiveList.js` keeps lists right when a refresh and an action
+  overlap (a reply that left before a local change is dropped; only the
+  newest reply counts). `useClaims` now uses it; `useListings` got the
+  same guard.
+- **Activity rail:** mounted only on desktop (no requests on phones); new
+  lines fade in at the top; a separate live region reads only the new
+  lines (the old `aria-live` on the whole list would have re-read the roll
+  every 20 seconds).
+- **Alerts** (`pages/common/Alerts.jsx`, `lib/notification.js`): grouped by
+  day; unread = red dot + "NEW" + bold text; a line opens its page ("Open My
+  requests") and is marked read at once (the server catches up); Mark all
+  read moves focus to the first day heading. Older days print only the time.
+- **Bell badge** on the bottom bar, rail and sidebar from the live count.
+- **Volunteer Pickups** (`pages/volunteer/Pickups.jsx`): Assigned / On the
+  way / Delivered as one three-part strip (one row at 360; it opens on On
+  the way when nothing is assigned but a run is in the bag); each run a
+  pickup slip (carry, pickup by, from, to, phone as a `tel:` link, assigned,
+  picked up, delivered); one 56px button per step (I've collected it, Mark
+  delivered); Can't do this run asks first and stamps HANDED BACK; focus
+  moves to the next button or the closing line; a run keeps its place in
+  its tab for the visit; turmeric note when the counter closes within the
+  hour; portions-carried figure beside the runs (820px container) or one
+  printed line under Delivered.
+- **Admin Overview** (`pages/admin/Overview.jsx`): leaf ImpactNumber with one
+  sentence and the 7-day Recharts chart (`components/DeliveriesChart.jsx`:
+  square leaf bars, today in chilli, values printed above, mono labels,
+  dotted grid, a `figcaption` summary for screen readers, no animation,
+  loaded lazily as its own chunk); Needs a volunteer (approved requests
+  without a run, oldest approval first, "updated 9:37 PM" beside the
+  count, a link to accounts waiting); the Right now receipt. When requests
+  are waiting on arrival the queue comes first, decided once per visit.
+- **Assign dialog** (`pages/admin/AssignVolunteer.jsx`,
+  `validation/assignRules.js`): approved volunteers read on open, quietest
+  first and preselected, "Free" / "Carrying 1 run"; "Assign Meera"; the
+  request stays in the queue stamped ASSIGNED for the visit, with focus on
+  its line.
+- **Approvals** (`pages/admin/Approvals.jsx`): Waiting / Decided tags; a
+  real `<table>` from a 640px window (contact folds under the name below
+  desktop; an email breaks after the @), slips on phones; Approve, Reject
+  (asks first); decided rows keep their stamp in place, with focus on it.
+- **Profile theme switch**: built in Stage 1; checked again (it flips paper
+  to chalkboard and is saved).
+- Removed `pages/common/Placeholder.jsx` (no page uses it any more).
+- **Critique** (`/impeccable critique`, two independent assessments, 28/40;
+  detector: one finding, fixed). The user chose "all five plus the minor
+  ones": the pickup deadline moved to row 2 (bold while collecting; To is
+  bold while on the way); the queue leads the Overview when requests wait;
+  Mark delivered is ink (red only for actions that cost something, or the
+  one main action of a form); the assign dialog preselects the quietest and
+  says "Carrying 1 run"; the Overview sentence no longer repeats the big
+  number; plus the "updated" time on the queue, run tabs on one row on
+  phones, alert links printed as "Open My requests ->", "Joined" on the
+  Approvals slips, and the rounded rule under the alert day headings.
+
+## Verified in Stage 4
+
+Test API on 5050 with `foodloop_test` (reseeded before each run); Vite on
+**5175** (5173 and 5174 were in use, left alone). The user's API and
+database were not touched.
+
+- `npm run build` succeeds (main chunk 732 kB, the chart 373 kB as its own
+  chunk); `impeccable detect` over `frontend/src`: one finding, fixed.
+- Screenshots of Pickups (Assigned, Delivered, empty), Alerts (three roles),
+  Overview, the assign dialog, Approvals (360 / 640 / 768 / 1440), the
+  reject dialog and Profile, in both themes: no horizontal overflow, no
+  console errors. Reduced motion: the Overview renders with the number at
+  rest.
+- Flows (Playwright script in the session scratchpad):
+  - Kiran: I've collected it -> "Marked as collected. Now take it over",
+    stamp PICKED UP, focus on Mark delivered, the run stays under Assigned;
+    Enter -> "Delivered. Thank you for the run", focus on the closing line.
+  - Meera: Can't do this run -> dialog -> "Run handed back...", stamp
+    HANDED BACK, focus on its line.
+  - Admin assign: quietest first; (before preselection was added) an empty
+    submit showed "Choose a volunteer" and focused the radios, and a choice
+    cleared it; Assign -> "Meera Nair will collect 3 kg of Dal Tadka and
+    Jeera Rice", the dialog closed, ASSIGNED stays, "None waiting".
+  - Approvals: Approve Rohit -> "Rohit Verma can now sign in", APPROVED in
+    place and focused; Reject a new account -> confirm -> REJECTED.
+  - Alerts: badge "3 unread"; opening a line goes to /requests, badge 2;
+    Mark all read -> "Marked 2 as read", no badge, focus on "Today".
+  - Live: a request sent from another session appeared on the donor's
+    Board ("3 waiting" -> "4 waiting") within 21 s without a reload, the
+    badge went up, and the rail announced only the new line. Tab hidden
+    for 42 s: 0 notification requests; shown again: one request at once.
 
 ## Done in Stage 3
 
@@ -267,13 +365,14 @@ fixed until the next blur (now re-checked on change while shown).
 
 - Not tried on a real phone (only emulated widths); `navigator.vibrate` for the
   stamp drop is untested on Android.
-- The JavaScript bundle is about 625 kB before gzip (Vite warns above 500 kB).
-  Route-level code splitting can be added in Stage 5 if wanted.
-- The activity rail loads once per visit; the 20-second refresh arrives in
-  Stage 4. The same goes for the donor's request queue and the
-  recipient's requests: they are read when the page opens and after each
-  action, not live (a new request appears on the Board after a reload or
-  a visit to another page and back, until Stage 4).
+- The main JavaScript chunk is about 732 kB before gzip (Vite warns above
+  500 kB); the chart is already split out. More route-level splitting can
+  be added in Stage 5 if wanted.
+- The live refresh is polling every 20 s, not push: a change shows up
+  within 20 s. The phone page of one token (`/home/listing/:id`) reads its
+  listing once; the list and the side panel refresh.
+- Decisions kept "in place for the visit" (approved, assigned, handed back)
+  move to their normal place after a reload (by design).
 - The 400 "Pickup for this token has closed" refusal on a request was not
   staged in a browser (it needs a deadline to pass while the form is open);
   it goes through the same slip path as the 409, which was checked.
@@ -289,6 +388,25 @@ fixed until the next blur (now re-checked on change while shown).
   replaced in Stage 5.
 - Restart nothing on the user's side: the test API on 5050 and the Vite server
   used for checks were stopped (see the final message of the stage).
+
+## Assumptions made (Stage 4)
+
+- **What refreshes live:** the badge, the activity rail and the list on the
+  open page (see above), every 20 s while the tab is visible. Pages also
+  re-read after each action, as before.
+- **Approvals table from a 640px window** (the user's answer); below
+  desktop the contact column folds under the name so the table fits beside
+  the rail.
+- **Approving an account does not ask first** (the common action); Reject
+  does. The same as Approve and Turn down on requests.
+- **Assign preselects the quietest volunteer** (critique); the admin can
+  change it. Approvals lists every account (Decided is the record).
+- **Alerts:** opening a line marks it read; read lines that lead nowhere
+  are plain text. Visiting the page does not mark everything read.
+- **The Overview puts the queue first** only when requests were waiting on
+  arrival; it does not rearrange while the admin works.
+- **The volunteer's finish** is the DELIVERED stamp fading in and the
+  thank-you line; the stamp drop stays reserved for claim approval.
 
 ## Assumptions made (Stage 3)
 
@@ -355,13 +473,11 @@ fixed until the next blur (now re-checked on change while shown).
 
 ## Exact next step to resume
 
-Wait for the user to test Stage 3. Then Stage 4: volunteer pickups (Assigned
-/ On the way / Delivered tabs, one large status button, pickup receipt),
-notifications page and bell badge, the single 20-second refresh (badge,
-activity rail, and the request lists; paused while the tab is hidden),
-dashboards with the Recharts 7-day chart, admin approvals and the assign
-dialog (`validation/assignRules.js`). Replace the remaining placeholders
-(volunteer and admin home, `/approvals`, `/notifications`).
+Wait for the user to test Stage 4. Then Stage 5: `/impeccable audit` and
+`polish` across the app, `review-animations` (with reduced motion), retake
+`docs/screenshots/` from the React app (`<role>-<screen>-<width>-<theme>.jpg`),
+finish VALIDATION.md and README (demo script: donor -> recipient ->
+volunteer -> delivered), consider route-level code splitting.
 
 ## Final task (only when the user says the project is finished)
 

@@ -163,9 +163,46 @@ server's own sentence, and the page reads its data again:
   cancelled", 403 "You can only cancel your own requests".
 
 ### Assign a volunteer (Stage 4)
-File: `frontend/src/validation/assignRules.js` (added in Stage 4).
-Backend: `pickupRoutes.js` `assignRules`.
+File: `frontend/src/validation/assignRules.js`, used by
+`frontend/src/pages/admin/AssignVolunteer.jsx` (the "Who collects it?"
+dialog on the admin's Overview). Backend: `pickupRoutes.js` `assignRules`
+and `pickupController.js` `assign`.
 
-| Field | Rule |
-|---|---|
-| volunteerId | required: a volunteer must be chosen ("Choose a volunteer") |
+| Field | Rule | Message |
+|---|---|---|
+| volunteerId | required: one of the approved volunteers listed (radio rows) | "Choose a volunteer" |
+
+Details:
+- The request being assigned (`claimRequestId`) is not a field: it is the
+  slip the dialog was opened from.
+- The volunteers are read again each time the dialog opens
+  (`GET /users?role=volunteer&status=approved`), quietest first, each with
+  "Free" or "Carrying 1 run". The quietest is chosen already (the admin can
+  pick another); arrow keys move between them (real radio inputs).
+- The rule still guards the form: with no choice (e.g. the list was empty
+  when it loaded) a submit shows "Choose a volunteer" under the list and
+  focuses the first option; choosing one clears it at once. The button
+  names the person ("Assign Meera").
+- The form does not close on a click outside (Escape and Not now do).
+
+Server-only checks shown to the user:
+- 400 "Choose a volunteer" (field error): under the list.
+- 409 "This request already has a volunteer", 400 "Pickup time for this
+  token has passed, so no run can be assigned", 400 "Only approved requests
+  can be given to a volunteer", 400 "<name>'s account is not approved yet":
+  a slip; the dialog closes and the queue and figures are read again.
+
+### Pickup steps, account decisions (Stage 4)
+No form fields, but the server can refuse. Each refusal is a slip with the
+server's own sentence, and the page reads its data again:
+- Volunteer steps (`pages/volunteer/Pickups.jsx`): "I've collected it"
+  (`picked_up`), "Mark delivered" (`delivered`), "Can't do this run"
+  (`cancelled`, asks first). 400 "This pickup changed a moment ago. Refresh
+  and try again" (a double tap, or a change elsewhere), 400 for a step the
+  transition table does not allow, 403 "You can only update your own
+  pickups".
+- Approvals (`pages/admin/Approvals.jsx`): Approve and Reject (asks first).
+  400 "This account is already approved" (decided in another tab).
+- Alerts: marking read cannot fail visibly; if the server refuses, the list
+  is read again so the screen shows the truth. "Mark all read" failures are
+  a slip.

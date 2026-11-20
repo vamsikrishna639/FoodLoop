@@ -21,7 +21,9 @@ export function forgetImpactNumbers() {
   shown.clear();
 }
 
-export default function ImpactNumber({ value, caption, suffix, onBoard = false, className = '' }) {
+// ink: the number's colour class on paper (default text-ink; the admin's
+// headline figure is text-leaf, the colour of delivered food).
+export default function ImpactNumber({ value, caption, suffix, onBoard = false, ink = 'text-ink', className = '' }) {
   const reduced = useReducedMotion();
   const [display, setDisplay] = useState(() => (reduced ? value : (shown.get(caption) ?? 0)));
 
@@ -51,7 +53,7 @@ export default function ImpactNumber({ value, caption, suffix, onBoard = false, 
       <p className="sr-only">
         {number(value)} {suffix} {caption}
       </p>
-      <p aria-hidden="true" className={`t-impact tabular-nums ${onBoard ? 'text-chalk' : 'text-ink'}`}>
+      <p aria-hidden="true" className={`t-impact tabular-nums ${onBoard ? 'text-chalk' : ink}`}>
         {number(display)}
         {suffix && <span className="ml-2 text-[0.4em] tracking-normal">{suffix}</span>}
       </p>

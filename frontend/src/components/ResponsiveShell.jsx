@@ -13,14 +13,21 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { motion, useReducedMotion } from 'motion/react';
 import { MagnifyingGlassIcon, PlusIcon } from '@phosphor-icons/react';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/LiveContext';
+import useMediaQuery from '../hooks/useMediaQuery';
 import { initials } from '../lib/format';
 import { DURATION, EASE } from '../lib/motion';
 import { ROLES, destinationsFor } from '../lib/roles';
 import ActivityRail from './ActivityRail';
 import BrandMark from './BrandMark';
 
-export default function ResponsiveShell({ unread = 0 }) {
+export default function ResponsiveShell() {
   const { user } = useAuth();
+  // The unread count for the bell badge, kept fresh by the live beat.
+  const { unread } = useNotifications();
+  // The activity rail is only shown on desktop, so it is only mounted (and
+  // only asks the server) there.
+  const wide = useMediaQuery('(min-width: 1025px)');
   const location = useLocation();
   const navigate = useNavigate();
   const reduced = useReducedMotion();
@@ -90,7 +97,7 @@ export default function ResponsiveShell({ unread = 0 }) {
             for the full page height; the rail itself sticks to the top. */}
         <div className="hidden w-[304px] shrink-0 border-l border-line desktop:block">
           <aside aria-label="Activity" className="sticky top-0 h-dvh overflow-y-auto">
-            <ActivityRail />
+            {wide && <ActivityRail />}
           </aside>
         </div>
       </div>

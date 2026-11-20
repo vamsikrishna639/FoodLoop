@@ -8,12 +8,21 @@
 //
 // The server decides what this user may see (admin: everything; donor: their
 // own listings; recipient and volunteer: their own requests or runs).
-// It loads once when the rail appears. (Live refresh every 20 seconds is
-// added with notifications in Stage 4.) It stays quiet, with no
-// illustration, so it never competes with the page beside it.
-import { useCallback, useEffect, useState } from 'react';
+// It loads when the rail appears and again on every live beat (every 20
+// seconds while the tab is visible, see context/LiveContext.jsx). The shell
+// mounts it only on desktop, where it is shown.
+//
+// Lines that arrive with a refresh fade in at the top (they are the change
+// worth noticing); the "2 min ago" times move on with each refresh. Screen
+// readers hear only the new lines, through a separate live region, instead
+// of the whole roll every 20 seconds. It stays quiet, with no illustration,
+// so it never competes with the page beside it.
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import { activity } from '../api/dashboard';
+import { useLiveBeat } from '../context/LiveContext';
 import { ago } from '../lib/format';
+import { DURATION, EASE } from '../lib/motion';
 import Button from './Button';
 
 const WORDS = {
@@ -33,17 +42,32 @@ const WORD_COLOURS = { delivered: 'text-leaf', rejected: 'text-chilli-deep', pos
 export default function ActivityRail() {
   const [events, setEvents] = useState(null);
   const [error, setError] = useState(null);
+  const [announcement, setAnnouncement] = useState('');
+  const seen = useRef(null); // ids already on the roll (null before the first load)
+  const fresh = useRef(new Set()); // ids that arrived with the latest refresh
 
-  const load = useCallback(() => {
-    setError(null);
-    activity()
-      .then((data) => setEvents(data.events))
-      .catch((err) => setError(err.message));
+  const load = useCallback(async () => {
+    try {
+      const data = await activity();
+      const list = data.events;
+      if (seen.current) {
+        const added = list.filter((e) => !seen.current.has(e.id));
+        fresh.current = new Set(added.map((e) => e.id));
+        if (added.length > 0) setAnnouncement(added.map((e) => e.text).join('. '));
+      }
+      seen.current = new Set(list.map((e) => e.id));
+      setEvents(list);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    }
   }, []);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useLiveBeat(load);
 
   let body;
   if (events === null && error) {
@@ -68,15 +92,7 @@ export default function ActivityRail() {
     body = (
       <ul>
         {events.map((e) => (
-          <li key={e.id} className="border-b border-line py-3">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className={`font-bold t-mono-sm ${WORD_COLOURS[e.kind] || 'text-ink-soft'}`}>{WORDS[e.kind] || 'Note'}</span>
-              <time dateTime={e.at} className="shrink-0 text-ink-soft t-mono-sm">
-                {ago(e.at)}
-              </time>
-            </div>
-            <p className="mt-1 text-ink t-body">{e.text}</p>
-          </li>
+          <EventLine key={e.id} event={e} isNew={fresh.current.has(e.id)} />
         ))}
       </ul>
     );
@@ -87,8 +103,32 @@ export default function ActivityRail() {
       <h2 className="t-title-lg text-ink">Activity</h2>
       <p className="mt-0.5 text-ink-soft t-mono-sm">What just happened</p>
       <div className="perforation mt-3 [--dot:var(--fl-perforation)]" aria-hidden="true" />
-      {/* New lines are announced by screen readers without moving focus. */}
-      <div aria-live="polite">{body}</div>
+      {body}
+      {/* Only new lines are read out, without moving focus. */}
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
     </div>
+  );
+}
+
+/** One printed line. A line that just arrived fades in (and rises 4px). */
+function EventLine({ event: e, isNew }) {
+  const reduced = useReducedMotion();
+  return (
+    <motion.li
+      initial={isNew ? { opacity: 0, y: reduced ? 0 : -4 } : false}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: reduced ? DURATION.fast : DURATION.base, ease: EASE.out }}
+      className="border-b border-line py-3"
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <span className={`font-bold t-mono-sm ${WORD_COLOURS[e.kind] || 'text-ink-soft'}`}>{WORDS[e.kind] || 'Note'}</span>
+        <time dateTime={e.at} className="shrink-0 text-ink-soft t-mono-sm">
+          {ago(e.at)}
+        </time>
+      </div>
+      <p className="mt-1 text-ink t-body">{e.text}</p>
+    </motion.li>
   );
 }

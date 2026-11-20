@@ -19,6 +19,7 @@ import { ErrorState } from '../../components/EmptyState';
 import PageFrame from '../../components/PageFrame';
 import ReceiptTimeline from '../../components/ReceiptTimeline';
 import { useAuth } from '../../context/AuthContext';
+import { useLiveBeat } from '../../context/LiveContext';
 import { useSlip } from '../../context/ToastContext';
 import useClaims from '../../hooks/useClaims';
 import useListings from '../../hooks/useListings';
@@ -40,11 +41,23 @@ export default function Board() {
   const [figures, setFigures] = useState(null);
 
   // "Delivered, ever" comes from the dashboard (rule 4: only delivered food counts).
-  useEffect(() => {
+  const loadFigures = useCallback(() => {
     dashboard()
       .then((data) => setFigures(data.figures))
-      .catch(() => setFigures(null));
+      .catch(() => {}); // keep the last figures; the tally prints --:-- until one arrives
   }, []);
+  useEffect(() => {
+    loadFigures();
+  }, [loadFigures]);
+
+  // Every 20 seconds (while the tab is visible) the board, the tally and the
+  // queue catch up with what happened elsewhere: new requests (the queue
+  // refreshes itself through useClaims), cancellations that gave portions
+  // back, deliveries.
+  useLiveBeat(() => {
+    listings.load();
+    loadFigures();
+  });
 
   // The shell's "Post food" button sends the donor here with a request to open the form.
   const postRequest = location.state?.postFood;

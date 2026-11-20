@@ -133,6 +133,7 @@
      desktop above 1024. Tailwind's own sm/md/lg are removed. */
   --breakpoint-*: initial;
   --breakpoint-tablet: 600px;
+  --breakpoint-register: 640px; /* the admin's Approvals table */
   --breakpoint-split: 900px;
   --breakpoint-desktop: 1025px;
 
