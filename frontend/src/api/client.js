@@ -70,7 +70,10 @@ async function request(method, path, { body, query } = {}) {
     throw new ApiError('The server sent an unexpected reply.', { status: response.status });
   }
 
-  if (response.ok && json.success) return json.data;
+  // Success: return the `data` object, with the server's own sentence added
+  // as `message` (e.g. "Token #FL-0042 is on the counter"), so a page can
+  // show it in a slip. Every FoodLoop response's data is an object.
+  if (response.ok && json.success) return { ...json.data, message: json.message };
 
   // A 401 on a signed-in request means the session is no longer valid.
   // (A wrong password at login also answers 401, but no token is set then.)

@@ -15,6 +15,9 @@ import Gallery from './pages/common/Gallery';
 import Placeholder from './pages/common/Placeholder';
 import Profile from './pages/common/Profile';
 import Welcome from './pages/common/Welcome';
+import Board from './pages/donor/Board';
+import ManageListings from './pages/donor/ManageListings';
+import Counter from './pages/recipient/Counter';
 import { PendingOnly, PublicOnly, RequireApproved } from './routes/Gate';
 
 /** Home differs per role. (Each is replaced by its real page in its stage.) */
@@ -22,13 +25,13 @@ function HomeForRole() {
   const { user } = useAuth();
   switch (user.role) {
     case 'donor':
-      return <Placeholder title="Board" stage={2} note="Today's Surplus chalkboard, the request queue and the Post food form." />;
+      return <Board />;
     case 'volunteer':
       return <Placeholder title="Pickups" stage={4} note="Your assigned runs with one large button for each step." />;
     case 'admin':
       return <Placeholder title="Overview" stage={4} note="Portions delivered, the 7-day chart and volunteer assignment." />;
     default:
-      return <Placeholder title="Today's Counter" stage={2} note="Every token on the counter, with search and filter tags." />;
+      return <Counter />;
   }
 }
 
@@ -58,15 +61,14 @@ export const router = createBrowserRouter([
           </RequireApproved>
         ),
         children: [
-          { path: '/home', element: <HomeForRole /> },
+          // /home/* so the recipient's counter stays mounted while the URL
+          // moves between /home and /home/listing/:id (Counter reads the rest).
+          { path: '/home/*', element: <HomeForRole /> },
           {
             path: '/requests',
             element: <Placeholder title="My requests" stage={3} note="Every request printed as a receipt." />,
           },
-          {
-            path: '/listings',
-            element: <Placeholder title="Listings" stage={2} note="Open and closed tokens, with Edit and Delete." />,
-          },
+          { path: '/listings', element: <ManageListings /> },
           {
             path: '/approvals',
             element: <Placeholder title="Approvals" stage={4} note="New accounts waiting for a decision." />,

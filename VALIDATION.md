@@ -72,22 +72,45 @@ File: `frontend/src/validation/registerRules.js`. Backend: `authRoutes.js`, `POS
 Server-only check: a used email (409) is shown under the email field.
 
 ### Post food / edit a listing (Stage 2)
-File: `frontend/src/validation/postFoodRules.js` (added in Stage 2).
-Backend: `foodRoutes.js` `listingRules` and `foodController.js` `checkTimes`.
-The values are already in `constants.js`:
+File: `frontend/src/validation/postFoodRules.js`, used by
+`frontend/src/pages/donor/ListingForm.jsx`.
+Backend: `foodRoutes.js` `listingRules` and `foodController.js` (`checkTimes`,
+and the reserved-quantity check in `update`).
 
-| Field | Rule |
-|---|---|
-| title | required; 2 to 80 characters |
-| description | optional; at most 500 characters |
-| quantity | required; whole number from 1 to 1000 |
-| unit | one of boxes, plates, kg, packets |
-| location | required; 2 to 120 characters |
-| foodType | one of veg, non-veg, mixed |
-| preparedAt | required; not in the future (5 minutes of leeway, as the backend allows) |
-| pickupDeadline | required; in the future; after the prepared time (custom `validate` using `getValues('preparedAt')`) |
-| allergenNotes | optional; at most 300 characters |
-| imageUrl | optional; must start with http:// or https:// |
+The rules are a function, `postFoodRules({ getValues, reserved, unit })`,
+because two of them compare fields and one depends on the listing being
+edited.
+
+| Field | Rule | Message |
+|---|---|---|
+| title | required; trimmed; 2 to 80 characters | "Give the food a name (2 to 80 characters)" |
+| foodType | one of veg, non-veg, mixed (radio tags) | "Choose veg, non-veg or mixed" |
+| quantity | whole number from 1 to 1000 (`validate`) | "Quantity must be a whole number from 1 to 1000" |
+| quantity (edit) | not below what approved requests reserved | "8 boxes are already reserved, so the quantity cannot go below that" |
+| unit | one of boxes, plates, kg, packets (radio tags) | "Choose boxes, plates, kg or packets" |
+| location | required; trimmed; 2 to 120 characters | "Say where to collect it from" |
+| preparedAt | required; not more than 5 minutes in the future (the backend's leeway) | "Prepared time cannot be in the future" |
+| pickupDeadline | required; in the future | "Pickup deadline must be in the future" |
+| pickupDeadline | after the prepared time (cross-field: `getValues('preparedAt')`) | "Pickup deadline must be after the prepared time" |
+| allergenNotes | optional; at most 300 characters | "Keep allergen notes under 300 characters" |
+| description (Notes) | optional; at most 500 characters | "Keep the description under 500 characters" |
+| imageUrl (Photo link) | optional; empty or `http(s)://...` | "Image link must start with http:// or https://" |
+
+Details:
+- The two times are native `datetime-local` inputs (local time); they are
+  sent to the server as ISO dates.
+- Changing **Prepared at** re-checks **Pickup by** (once the user has been
+  to it), because the "after the prepared time" rule depends on both.
+- The **+1 h / +2 h / +4 h** buttons set Pickup by with `setValue(...,
+  { shouldValidate: true })`, so the rule runs at once.
+- Server errors for any of these fields (`data.errors`) are put under the
+  field; other refusals (403 "You can only manage your own listings", 400
+  "This listing has closed and can no longer be edited") are shown as a slip.
+
+Deleting a listing has no form, but the server can still refuse it (409
+"This listing has approved requests, so it cannot be deleted"); that is
+shown as a slip, and the Delete button is not offered for listings with
+reserved portions in the first place.
 
 ### Request food (Stage 3)
 File: `frontend/src/validation/requestRules.js` (added in Stage 3).

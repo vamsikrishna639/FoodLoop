@@ -24,8 +24,8 @@ The backend is complete. The React frontend is being built in five stages.
 | Stage | Contents | Status |
 |---|---|---|
 | 1 | Setup, design tokens, component gallery, sign in / register / waiting page, role-based routing, responsive shell | Done |
-| 2 | Food listings: recipient counter and detail, donor board, post / edit / delete | Next |
-| 3 | Claims: request, approve (stamp drop), turn down, cancel; My requests | Planned |
+| 2 | Food listings: recipient counter and detail, donor board, post / edit / delete | Done |
+| 3 | Claims: request, approve (stamp drop), turn down, cancel; My requests | Next |
 | 4 | Volunteer pickups, alerts, dashboards and chart, admin approvals and assignment | Planned |
 | 5 | Polish, audit, screenshots | Planned |
 
@@ -44,6 +44,23 @@ What works in the browser today:
   a dark rail on tablets, a menu-board sidebar plus the **Activity** rail on
   desktops. Each role sees only its own pages; the pages that later stages
   fill in show a short "Built in Stage N" note.
+- **Recipient, Today's Counter:** every open or reserved token, soonest
+  deadline first, with search (dishes or pickup places), Veg / Non-veg /
+  Mixed / Closing soon tags and a token count. Phones open a token as its
+  own page (the card flies there); tablets and desktops show it in a side
+  panel, and the address bar names the chosen token
+  (`/home/listing/<id>`). The detail has the pickup receipt (place,
+  prepared time, pickup by, posted, left), the allergens and the
+  food-safety note. **Browse** puts the cursor in the search box.
+  (Asking for a share comes in Stage 3.)
+- **Donor, Board:** the chalkboard "Today's Surplus" (one line per open
+  token, closing first; tap a line to edit it) and a printed counter tally.
+  **Post food** opens the form: a bottom sheet on phones, a dialog wider.
+  Every field is checked as in VALIDATION.md; the +1 h / +2 h / +4 h buttons
+  set the pickup time.
+- **Listings** (donor: their own; admin: "All listings"): Open and Closed
+  tabs, each token with **Edit** (open ones) and **Delete** (only when no
+  portion is reserved, after a confirmation).
 - **Profile:** the member slip, the paper / chalkboard theme switch (saved in
   the browser) and Sign out.
 - **Component gallery** at `/gallery`, open without signing in.
@@ -309,15 +326,17 @@ frontend/
     api/              client.js (the one fetch wrapper) and one file per resource
     context/          AuthContext, ThemeContext, ToastContext (slip messages)
     routes/Gate.jsx   who may open which page (signed out, pending, role)
-    hooks/            useValidatedForm (react-hook-form settings), useMediaQuery
+    hooks/            useValidatedForm (react-hook-form settings), useMediaQuery,
+                      useFeed (the counter's list and filters), useListings
     validation/       the rules for each form, shared constants, server errors
     lib/              motion tokens, formatting, roles and navigation, storage
     components/       TokenCard, StatusStamp, StampDrop, PortionMeter, DeadlineClock,
                       ReceiptTimeline, ImpactNumber, VegMarker, Chalkboard,
                       ResponsiveShell, ActivityRail, Field, Button and the rest
     pages/            auth (login, register, pending), common (welcome, profile,
-                      gallery); the recipient, donor, volunteer and admin pages
-                      arrive in Stages 2 to 4
+                      gallery), recipient (Counter, ListingDetail), donor (Board,
+                      ListingForm, ManageListings); volunteer and admin pages
+                      arrive in Stage 4
     styles/index.css  the design tokens (CSS variables), Tailwind theme,
                       type scale and the paper shapes
 ```

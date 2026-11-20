@@ -33,7 +33,10 @@ export default function ResponsiveShell({ unread = 0 }) {
       firstRender.current = false;
       return;
     }
-    mainRef.current?.focus({ preventScroll: true });
+    // A page may already have put focus somewhere useful (Browse puts it in
+    // the search field); only move it when it is still outside the page.
+    const main = mainRef.current;
+    if (main && !main.contains(document.activeElement)) main.focus({ preventScroll: true });
   }, [location.pathname]);
 
   if (!user) return null; // mid sign-out
@@ -70,8 +73,11 @@ export default function ResponsiveShell({ unread = 0 }) {
           tabIndex={-1}
           className="min-w-0 flex-1 pb-[calc(var(--bottom-bar,0px)+env(safe-area-inset-bottom)+32px)] focus:outline-none tablet:pb-0"
         >
+          {/* Keyed by the first part of the path, so /home and /home/listing/42
+              are the same page (the counter keeps its list) while moving to
+              /profile fades the page in. */}
           <motion.div
-            key={location.pathname}
+            key={location.pathname.split('/')[1]}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: reduced ? DURATION.fast : DURATION.base, ease: EASE.out }}
@@ -80,12 +86,13 @@ export default function ResponsiveShell({ unread = 0 }) {
           </motion.div>
         </main>
 
-        <aside
-          aria-label="Activity"
-          className="sticky top-0 hidden h-dvh w-[304px] shrink-0 overflow-y-auto border-l border-line desktop:block"
-        >
-          <ActivityRail />
-        </aside>
+        {/* As with the sidebar, the outer column carries the dividing line
+            for the full page height; the rail itself sticks to the top. */}
+        <div className="hidden w-[304px] shrink-0 border-l border-line desktop:block">
+          <aside aria-label="Activity" className="sticky top-0 h-dvh overflow-y-auto">
+            <ActivityRail />
+          </aside>
+        </div>
       </div>
 
       <BottomBar destinations={destinations} action={action} unread={unread} />
@@ -99,65 +106,69 @@ export default function ResponsiveShell({ unread = 0 }) {
 // ---------------------------------------------------------------------------
 
 function SideNav({ user, destinations, action, unread }) {
+  // The outer column paints the board colour for the full height of the
+  // page; the nav inside it sticks to the top of the window.
   return (
-    <nav
-      aria-label="Main"
-      className="on-board sticky top-0 hidden h-dvh w-[92px] shrink-0 flex-col items-center bg-board px-2 pb-4 pt-6 tablet:flex desktop:w-[248px] desktop:items-stretch desktop:px-4"
-    >
-      <div className="desktop:hidden">
-        <BrandMark onBoard size={36} showWordmark={false} />
-      </div>
-      <div className="hidden pl-2 desktop:block">
-        <BrandMark onBoard size={30} />
-      </div>
-
-      {action && (
-        <button
-          type="button"
-          onClick={action.onClick}
-          aria-label={action.label}
-          className="press-scale mt-6 flex size-14 items-center justify-center gap-2 rounded-control bg-chilli-deep text-on-chilli transition-[background-color,transform] duration-[120ms] hover:bg-chilli-deep/90 active:scale-[0.98] desktop:h-12 desktop:w-full"
-        >
-          <action.icon size={22} weight="bold" aria-hidden="true" />
-          <span className="hidden t-label-lg desktop:inline">{action.label}</span>
-        </button>
-      )}
-
-      <ul className="mt-4 w-full flex-1 space-y-1 overflow-y-auto">
-        {destinations.map((d) => (
-          <li key={d.path}>
-            <NavLink
-              to={d.path}
-              aria-label={d.badge && unread > 0 ? `${d.label}, ${unread} unread` : undefined}
-              className={({ isActive }) =>
-                `flex min-h-12 flex-col items-center justify-center gap-1 rounded-control px-1 py-2 transition-colors duration-[120ms] desktop:flex-row desktop:justify-start desktop:gap-3 desktop:px-3 ${
-                  isActive ? 'bg-chalk font-bold text-board' : 'font-medium text-chalk hover:bg-chalk/8'
-                }`
-              }
-            >
-              <BadgedIcon icon={d.icon} count={d.badge ? unread : 0} />
-              <span className="max-w-full truncate t-label-sm text-current desktop:t-title-md desktop:font-[inherit]">
-                {d.label}
-              </span>
-            </NavLink>
-          </li>
-        ))}
-      </ul>
-
-      <NavLink
-        to="/profile"
-        aria-label={`Profile and settings for ${user.name}`}
-        className="mt-2 flex min-h-14 items-center gap-3 rounded-control p-2 transition-colors duration-[120ms] hover:bg-chalk/8"
+    <div className="on-board hidden shrink-0 bg-board tablet:block">
+      <nav
+        aria-label="Main"
+        className="sticky top-0 flex h-dvh w-[92px] flex-col items-center px-2 pb-4 pt-6 desktop:w-[248px] desktop:items-stretch desktop:px-4"
       >
-        <span className="grid size-10 shrink-0 place-items-center rounded-full border-[1.5px] border-chalk-soft font-bold text-chalk t-mono">
-          {initials(user.name)}
-        </span>
-        <span className="hidden min-w-0 desktop:block">
-          <span className="block truncate text-chalk t-title-sm">{user.name}</span>
-          <span className="block text-chalk-soft t-mono-sm">{ROLES[user.role]?.label}</span>
-        </span>
-      </NavLink>
-    </nav>
+        <div className="desktop:hidden">
+          <BrandMark onBoard size={36} showWordmark={false} />
+        </div>
+        <div className="hidden pl-2 desktop:block">
+          <BrandMark onBoard size={30} />
+        </div>
+
+        {action && (
+          <button
+            type="button"
+            onClick={action.onClick}
+            aria-label={action.label}
+            className="press-scale mt-6 flex size-14 items-center justify-center gap-2 rounded-control bg-chilli-deep text-on-chilli transition-[background-color,transform] duration-[120ms] hover:bg-chilli-deep/90 active:scale-[0.98] desktop:h-12 desktop:w-full"
+          >
+            <action.icon size={22} weight="bold" aria-hidden="true" />
+            <span className="hidden t-label-lg desktop:inline">{action.label}</span>
+          </button>
+        )}
+
+        <ul className="mt-4 w-full flex-1 space-y-1 overflow-y-auto">
+          {destinations.map((d) => (
+            <li key={d.path}>
+              <NavLink
+                to={d.path}
+                aria-label={d.badge && unread > 0 ? `${d.label}, ${unread} unread` : undefined}
+                className={({ isActive }) =>
+                  `flex min-h-12 flex-col items-center justify-center gap-1 rounded-control px-1 py-2 transition-colors duration-[120ms] desktop:flex-row desktop:justify-start desktop:gap-3 desktop:px-3 ${
+                    isActive ? 'bg-chalk font-bold text-board' : 'font-medium text-chalk hover:bg-chalk/8'
+                  }`
+                }
+              >
+                <BadgedIcon icon={d.icon} count={d.badge ? unread : 0} />
+                <span className="max-w-full truncate t-label-sm text-current desktop:t-title-md desktop:font-[inherit]">
+                  {d.label}
+                </span>
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+
+        <NavLink
+          to="/profile"
+          aria-label={`Profile and settings for ${user.name}`}
+          className="mt-2 flex min-h-14 items-center gap-3 rounded-control p-2 transition-colors duration-[120ms] hover:bg-chalk/8"
+        >
+          <span className="grid size-10 shrink-0 place-items-center rounded-full border-[1.5px] border-chalk-soft font-bold text-chalk t-mono">
+            {initials(user.name)}
+          </span>
+          <span className="hidden min-w-0 desktop:block">
+            <span className="block truncate text-chalk t-title-sm">{user.name}</span>
+            <span className="block text-chalk-soft t-mono-sm">{ROLES[user.role]?.label}</span>
+          </span>
+        </NavLink>
+      </nav>
+    </div>
   );
 }
 

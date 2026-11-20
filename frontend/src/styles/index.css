@@ -456,6 +456,90 @@
     drop-shadow(0 -2px 0 var(--edge));
 }
 
+/* ---------------------------------------------------------------------------
+ * Modal (components/Modal.jsx): a bottom sheet on phones, a dialog wider.
+ * Entrances use @starting-style transitions; closing is instant.
+ * ------------------------------------------------------------------------- */
+@layer components {
+  .modal {
+    margin: auto 0 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 92dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0 0 env(safe-area-inset-bottom);
+    border: 0;
+    border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+    background: var(--fl-surface);
+    color: var(--fl-ink);
+    box-shadow: var(--fl-shadow-2);
+    translate: 0 0;
+    transition: translate 0.28s var(--ease-fl-out);
+  }
+  .modal::backdrop {
+    background: rgb(20 18 15 / 0.5);
+    transition: opacity 0.2s var(--ease-fl-out);
+  }
+  @starting-style {
+    .modal[open] {
+      translate: 0 100%;
+    }
+    .modal[open]::backdrop {
+      opacity: 0;
+    }
+  }
+  @media (min-width: 600px) {
+    .modal {
+      margin: auto;
+      width: min(600px, calc(100% - 48px));
+      max-height: calc(100dvh - 48px);
+      padding: 0;
+      border-radius: var(--radius-sheet);
+      translate: none;
+      transition:
+        opacity 0.2s var(--ease-fl-out),
+        scale 0.2s var(--ease-fl-out);
+    }
+    @starting-style {
+      .modal[open] {
+        opacity: 0;
+        scale: 0.97;
+      }
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .modal {
+      translate: none;
+      transition: opacity 0.12s;
+    }
+    @starting-style {
+      .modal[open] {
+        translate: none;
+        scale: 1;
+        opacity: 0;
+      }
+    }
+  }
+}
+
+/* The page behind an open modal does not scroll. */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
+/* The token card flying to its detail page on phones (a View Transition,
+   started by React Router's viewTransition). It moves on screen, so it uses
+   the in-out curve; skipped entirely under reduced motion. */
+::view-transition-group(*) {
+  animation-duration: 0.28s;
+  animation-timing-function: var(--ease-fl-in-out);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.2s;
+}
+
 /* On phones the bottom bar covers the last 68px; slips and pages lift above it. */
 @media (max-width: 599px) {
   :root:has(.bottom-bar) {

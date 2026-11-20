@@ -21,7 +21,7 @@ they changed three things in the palette — see "Contrast findings" below.
 
 ---
 
-## 1. Colour
+## 1. Colors
 
 ### 1.1 Light theme — "paper"
 
@@ -226,6 +226,16 @@ to a change. If it does none of these it is removed.
   and turn. Short opacity fades remain (at most 120ms) because they aid
   comprehension: list items fade in together, page and panel cross-fades stay,
   and the APPROVED stamp fades in at rest.
+- **Web implementation (React):** durations and curves live in
+  `src/lib/motion.js` (`DURATION`, `EASE`) for the `motion` library and as
+  `ease-fl-out` / `ease-fl-in-out` in CSS. Modals use the native `<dialog>`
+  with `@starting-style` transitions: a 280ms slide up from `translateY(100%)`
+  for the phone sheet, a 200ms fade + scale from 0.97 for the wider dialog,
+  opacity only under reduced motion, closing instant. The TokenCard flies to
+  its detail page on phones with a View Transition (`viewTransition` on the
+  navigation, `view-transition-name: token-<id>` on both cards, 280ms
+  in-out), skipped under reduced motion. The side panel swaps tokens with a
+  120ms fade only (switched often). Filter tags change colour only.
 - **Frequency:** things tapped many times a day (navigation tabs, radio
   choices) change instantly; the page cross-fade is their only motion.
 

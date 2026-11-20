@@ -13,15 +13,18 @@
 // outline is drawn by the parent's drop-shadows, so it follows the notches.
 import { useState } from 'react';
 import { dishInitials } from '../lib/format';
+import { donorName as donorNameOf } from '../lib/listing';
 import DeadlineClock from './DeadlineClock';
 import PortionMeter from './PortionMeter';
 import StatusStamp from './StatusStamp';
 import VegMarker from './VegMarker';
 
-export default function TokenCard({ listing, stamp, onOpen, selected = false, as: Tag = 'article' }) {
+// transitionName: a unique view-transition-name (e.g. "token-<id>") so the
+// card can fly to the same card on the detail page on phones.
+export default function TokenCard({ listing, stamp, onOpen, selected = false, transitionName, as: Tag = 'article' }) {
   const [hovered, setHovered] = useState(false);
   const muted = stamp === 'expired' || stamp === 'completed';
-  const donorName = listing.donorId?.name || listing.donorName || 'Campus canteen';
+  const donorName = listing.donorName || donorNameOf(listing);
   const interactive = Boolean(onOpen);
 
   const edge = selected ? 'var(--fl-ink)' : hovered ? 'var(--fl-control)' : 'var(--fl-line)';
@@ -65,10 +68,11 @@ export default function TokenCard({ listing, stamp, onOpen, selected = false, as
     </div>
   );
 
-  if (!interactive) return <Tag>{slip}</Tag>;
+  const style = transitionName ? { viewTransitionName: transitionName } : undefined;
+  if (!interactive) return <Tag style={style}>{slip}</Tag>;
 
   return (
-    <Tag>
+    <Tag style={style}>
       <button
         type="button"
         onClick={onOpen}

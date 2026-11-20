@@ -20,7 +20,7 @@ Read these before working:
 - `VALIDATION.md`: every form, its rules and the file that holds them.
 - `PRODUCT.md`: product context used by the `impeccable` skill.
 
-**Current stage:** React rewrite, Stage 1 of 5 done (setup, design tokens, component gallery, auth and routing). Next is Stage 2 (food listings).
+**Current stage:** React rewrite, Stages 1 and 2 of 5 done (setup, auth, routing; food listings). Next is Stage 3 (claims).
 
 ## Commands
 
@@ -48,6 +48,8 @@ The backend's tests are the Postman collection in `backend/postman/` (80 request
 
 A second API copy can run beside the user's: `PORT=5050 MONGO_URI='mongodb://127.0.0.1:27017/foodloop_test' node src/server.js` (dotenv does not override a variable already set). Seed that database with the same `MONGO_URI` before `node seed/seed.js`, so seeding never wipes the user's data. Point Vite at it with `VITE_API_URL=http://localhost:5050/api npx vite` (an existing environment variable beats `.env`). `npm start` does not reload: restart after adding routes, or new endpoints answer 404.
 
+If port 5173 is busy (the user's own dev server), run the test copy of Vite on another port (`npx vite --port 5174`; the CLI flag overrides `strictPort`'s port). Vite reloads the page the first time it optimises a new dependency, so a check that loads a page right after adding an import can read a stale URL; run it again.
+
 Visual checks (temporary tooling, see rule 2): a Playwright script in the session scratchpad screenshots pages at 360, 768 and 1440 wide in both themes and reports horizontal overflow and console errors. Sign in through the API and put the session in localStorage before loading a page: `foodloop_token` = the raw JWT, `foodloop_theme` = `light` or `dark`, `foodloop_seen_welcome` = `true` (plain strings, not JSON). Re-seeding creates new user ids, so old tokens stop working. `getByText` also finds hidden copies (the auth board panel is `display:none` on phones), so scope locators to `#main`. The installed Chromium build is 1254; launch it with `executablePath`.
 
 Screenshots for the record live in `docs/screenshots/` as `<role>-<screen>-<width>-<theme>.jpg`; they are retaken from the React app in Stage 5.
@@ -59,6 +61,7 @@ Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `
 - Build in the five stages of the React rewrite (listed in `PROGRESS.md`). Stop after each stage and wait for the user to test it.
 - Commit at the end of each stage (e.g. `React Stage 1: setup, design tokens, gallery, auth and routing`). **Do not push** unless the user asks (changed for the React rewrite). Never force-push.
 - Before every commit, update `CLAUDE.md`, `README.md`, `PROGRESS.md` (and `VALIDATION.md` when a form changes) so they match the code, and commit them together with the work. Do not commit `VIVA_NOTES.md` (the user's own file) unless asked.
+- The Impeccable design hook is installed (`.impeccable/config.json`, committed; `config.local.json` and `.claude/settings.local.json` are git-ignored). It scans each edited UI file and reports deterministic design issues; act on them. Do not run `npx impeccable update` unless the user asks.
 - Each `impeccable shape` round may ask one short question; the user answers it and expects the stage to continue without another stop.
 - End each stage with: the commands to run, a checklist of exactly what to click and what should appear, and a list of assumptions made.
 - Code must be clean and commented so a student can explain it in a viva. Prefer plain, readable code over clever abstractions.
@@ -92,6 +95,11 @@ Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `
 - `src/lib/roles.js` holds the roles, each role's allowed paths (`canOpen`) and navigation (`destinationsFor`). A new shell page needs: its path in `ALLOWED`, a destination if it is in the navigation, and a route under the shell in `App.jsx`.
 - `src/components/ResponsiveShell.jsx` is the single frame for signed-in pages: bottom bar under 600px, dark rail from 600 to 1024, sidebar plus `ActivityRail` above. The layouts switch with CSS breakpoints, not JavaScript. The page cross-fades on navigation (opacity only) and focus moves to `#main`. The role's action (`Post food` / `Browse`) navigates to `/home` with `location.state.postFood` / `focusSearch` (a timestamp); the Stage 2 pages read it.
 - Pages that later stages build are `Placeholder` ("Built in Stage N"); replace each with the real page in its stage.
+- The home route is `/home/*`. `HomeForRole` picks the page; the recipient's `Counter` (`pages/recipient/Counter.jsx`) reads the rest of the path (`listing/<id>`), so it stays mounted while the URL moves between the list and a token and keeps its list and filters (`hooks/useFeed.js`). Below 600px an open token is its own page (`ListingPage`, the card flies there with `viewTransition` and `view-transition-name: token-<id>`); from 600px it is the side panel, and selecting replaces the URL. The shell's page fade is keyed by the first path segment, so `/home` and `/home/listing/x` are one page.
+- Donor pages (`pages/donor/`): `Board` (chalkboard + tally; the tally moves beside the board only when its container is at least 900px wide, an `@container` query), `ManageListings` (also the admin's "All listings"), and `ListingForm` (post and edit). Listing data comes from `hooks/useListings.js` (`upsert`, `removeById` after a save or delete). Facts about a listing (`available`, `isOpen`, `isClosingSoon`, `stampOf`, `donorName`) are in `lib/listing.js`.
+- `components/Modal.jsx` wraps the native `<dialog>` (focus trap, Escape, inert page): a bottom sheet under 600px, a dialog above, entrance via `@starting-style` in `styles/index.css` (`.modal`). `closeOnBackdrop={false}` for forms. `components/FilterTag.jsx` has `FilterTag` (toggle button, `aria-pressed`) and `ChoiceTags` (a radio group drawn as tags, for forms). `components/FadeUp.jsx` is the first-load stagger.
+- `api/client.js` returns the response's `data` plus the server's `message` (`{ ...data, message }`), so a page can show "Token #FL-0042 is on the counter" in a slip.
+- The shell moves focus to `#main` after navigation only if the page has not already put focus inside it (Browse focuses the search box).
 - Forms use `useValidatedForm()` (`src/hooks/useValidatedForm.js`): react-hook-form with `mode: 'onBlur'`, `reValidateMode: 'onChange'`, `shouldFocusError`, plus `field(name, rules)`, which re-checks a field on change while it shows an error. Rules live in `src/validation/<form>Rules.js` (shared values in `constants.js`); never inline rules in components. Server errors go through `handleServerError` (`validation/serverErrors.js`): field errors with `setError`, anything else as a slip. See VALIDATION.md.
 - Feedback messages: `useSlip()` from `ToastContext` (`showSlip(message, { kind: 'done' | 'error' | 'note' })`).
 - Fields: `TextField`, `TextArea`, `PasswordField`, `FieldShell`, `FieldError`, `FormNotice` in `components/Field.jsx`. React 19 passes `ref` as a prop, so `register()`'s ref reaches the input without `forwardRef`.
