@@ -49,17 +49,20 @@ export default function TokenCard({
         {/* Top: what the food is. */}
         <div className="flex gap-3 p-4">
           <TicketBlock title={listing.title} foodType={listing.foodType} imageUrl={listing.imageUrl} />
-          <div className="min-w-0 flex-1">
-            {/* Marker on the left, stamp in the right corner; on very narrow
-                cards the stamp wraps below instead of overflowing. */}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <VegMarker type={listing.foodType} showLabel />
-              <StatusStamp kind={stamp} />
-            </div>
-            <Title className={`mt-2 line-clamp-2 t-headline-sm ${muted ? 'text-ink-soft' : 'text-ink'}`}>
+          {/* The title comes first in the code, so a screen reader (and the
+              card's button name) starts with the dish; the marker row is
+              drawn above it with order-first. */}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Title className={`line-clamp-2 t-headline-sm ${muted ? 'text-ink-soft' : 'text-ink'}`}>
               {listing.title}
             </Title>
             <p className="mt-0.5 truncate text-ink-soft t-body">{donorName}</p>
+            {/* Marker on the left, stamp in the right corner; on very narrow
+                cards the stamp wraps below instead of overflowing. */}
+            <div className="order-first mb-2 flex flex-wrap items-center justify-between gap-2">
+              <VegMarker type={listing.foodType} showLabel />
+              <StatusStamp kind={stamp} />
+            </div>
           </div>
         </div>
 
@@ -84,6 +87,9 @@ export default function TokenCard({
   const style = transitionName ? { viewTransitionName: transitionName } : undefined;
   if (!interactive) return <Tag style={style}>{slip}</Tag>;
 
+  // No aria-label: the button is named by what it shows (dish, canteen,
+  // type, status, token, portions left, time left), so the name matches the
+  // visible text (WCAG 2.5.3) and includes the deadline.
   return (
     <Tag style={style}>
       <button
@@ -92,7 +98,6 @@ export default function TokenCard({
         onPointerEnter={() => setHovered(true)}
         onPointerLeave={() => setHovered(false)}
         aria-pressed={selected || undefined}
-        aria-label={`${listing.title} from ${donorName}, token ${listing.tokenNumber}`}
         className="press-scale block w-full rounded-slip text-left transition-transform duration-[120ms] ease-fl-out active:scale-[0.98]"
       >
         {slip}
@@ -132,9 +137,11 @@ function TicketBlock({ title, foodType, imageUrl }) {
       aria-hidden="true"
       className={`relative size-[68px] shrink-0 rounded-stamp border border-current/45 bg-current/12 ${tone}`}
     >
-      {/* A printed rule and caption, like the header of a real slip. */}
+      {/* A printed rule and caption, like the header of a real slip. The
+          tiny caption is in ink: the food-type colour (and even ink-soft)
+          on the tint drops below 4.5:1 in the dark theme. */}
       <div className="absolute inset-x-[7px] top-[7px] flex items-center gap-1">
-        <span className="font-mono text-[8px] font-medium tracking-[0.05em]">TOKEN</span>
+        <span className="font-mono text-[8px] font-medium tracking-[0.05em] text-ink">TOKEN</span>
         <span className="h-px flex-1 bg-current/45" />
       </div>
       <span className="absolute inset-x-0 bottom-[9px] text-center t-headline-md leading-none">{dishInitials(title)}</span>

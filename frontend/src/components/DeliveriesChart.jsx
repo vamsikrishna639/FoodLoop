@@ -55,9 +55,14 @@ export default function DeliveriesChart({ days, height = 200 }) {
   return (
     <figure>
       <figcaption className="sr-only">{summary}</figcaption>
-      <div aria-hidden="true" className="font-mono" style={{ height }}>
+      {/* The drawing is hidden from screen readers (the figcaption reads the
+          numbers) and inert, so nothing inside it can take keyboard focus:
+          Recharts' own keyboard layer is off (accessibilityLayer={false}),
+          and Chrome would otherwise stop on one of its SVG layers. There is
+          no tooltip to lose; the values are printed on the bars. */}
+      <div inert aria-hidden="true" className="font-mono" style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 22, right: 4, bottom: 0, left: -12 }} barCategoryGap="22%">
+          <BarChart accessibilityLayer={false} data={data} margin={{ top: 22, right: 4, bottom: 0, left: -12 }} barCategoryGap="22%">
             <CartesianGrid vertical={false} stroke="var(--fl-perforation)" strokeDasharray="2 4" />
             <XAxis
               dataKey="label"

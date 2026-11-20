@@ -196,20 +196,22 @@ function BoardLine({ listing: l, onEdit }) {
     <button
       type="button"
       onClick={onEdit}
-      aria-label={`${l.title}, ${left} of ${l.quantity} ${l.unit} left, ${when}. Edit`}
       className="block w-full rounded-stamp px-1 py-2 text-left transition-colors duration-[120ms] hover:bg-chalk/6"
     >
-      <span className="flex items-end gap-2" aria-hidden="true">
+      {/* Named by its own text plus a hidden "Edit", so what a screen
+          reader says matches what is written on the board (WCAG 2.5.3). */}
+      <span className="flex items-end gap-2">
         <span className="max-w-[65%] t-title-lg text-chalk [overflow-wrap:anywhere]">{l.title}</span>
-        <span className="leader mb-1.5 min-w-4 flex-1 [--dot:rgb(169_163_151_/_0.5)]" />
+        <span className="leader mb-1.5 min-w-4 flex-1 [--dot:color-mix(in_srgb,var(--fl-chalk-soft)_50%,transparent)]" aria-hidden="true" />
         {/* "none left" is in turmeric, so a fully reserved line stands out. */}
         <span className={`shrink-0 font-bold t-mono ${left === 0 ? 'text-turmeric' : 'text-chalk'}`}>
           {left === 0 ? 'none left' : `${left} left`}
         </span>
       </span>
-      <span className="mt-0.5 block text-chalk-soft t-mono-sm" aria-hidden="true">
+      <span className="mt-0.5 block text-chalk-soft t-mono-sm">
         #{l.tokenNumber} · {quantity(l.quantity, l.unit)} · {when}
       </span>
+      <span className="sr-only">Edit</span>
     </button>
   );
 }

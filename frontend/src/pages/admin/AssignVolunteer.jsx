@@ -11,7 +11,7 @@
 // counts are current. The quietest come first and the first is already
 // chosen, so spreading the work is the easy choice (the admin can pick
 // someone else). Rules: validation/assignRules.js (VALIDATION.md).
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { BicycleIcon, CircleIcon, RadioButtonIcon } from '@phosphor-icons/react';
 import * as pickupsApi from '../../api/pickups';
 import * as usersApi from '../../api/users';
@@ -65,6 +65,15 @@ function AssignForm({ claim: c, onClose, onAssigned, onStale }) {
   };
   useEffect(loadVolunteers, []);
 
+  // The dialog opens before the list arrives, so the browser first puts
+  // focus on the only ready control (Not now). Once the volunteers are
+  // shown, focus moves to the chosen one: Enter assigns them, the arrow
+  // keys pick someone else.
+  const groupRef = useRef(null);
+  useEffect(() => {
+    if (volunteers?.length) groupRef.current?.querySelector('input:checked')?.focus();
+  }, [volunteers]);
+
   const chosenId = watch('volunteerId');
   const chosen = volunteers?.find((v) => v.id === chosenId);
 
@@ -102,7 +111,7 @@ function AssignForm({ claim: c, onClose, onAssigned, onStale }) {
   } else {
     const inputProps = field('volunteerId', assignRules.volunteerId);
     list = (
-      <fieldset aria-invalid={errors.volunteerId ? true : undefined} aria-describedby={errors.volunteerId ? 'volunteer-error' : undefined}>
+      <fieldset ref={groupRef} aria-invalid={errors.volunteerId ? true : undefined} aria-describedby={errors.volunteerId ? 'volunteer-error' : undefined}>
         <legend className="sr-only">Volunteer</legend>
         <ul className="space-y-2">
           {volunteers.map((v) => (

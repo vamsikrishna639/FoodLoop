@@ -20,7 +20,7 @@ Read these before working:
 - `VALIDATION.md`: every form, its rules and the file that holds them.
 - `PRODUCT.md`: product context used by the `impeccable` skill.
 
-**Current stage:** React rewrite, Stages 1 to 4 of 5 done (setup, auth, routing; food listings; claims; volunteers, alerts, live refresh, admin). Next is Stage 5 (audit, polish, screenshots, docs).
+**Current stage:** React rewrite, all 5 stages done (setup, auth, routing; food listings; claims; volunteers, alerts, live refresh, admin; audit, polish, code splitting, screenshots, docs). Waiting for the user to test Stage 5. The only task left is the final cleanup in `PROGRESS.md`, and only when the user says the project is finished.
 
 ## Commands
 
@@ -52,7 +52,7 @@ If port 5173 is busy (the user's own dev server), run the test copy of Vite on a
 
 Visual checks (temporary tooling, see rule 2): a Playwright script in the session scratchpad screenshots pages at 360, 768 and 1440 wide in both themes and reports horizontal overflow and console errors. Sign in through the API and put the session in localStorage before loading a page: `foodloop_token` = the raw JWT, `foodloop_theme` = `light` or `dark`, `foodloop_seen_welcome` = `true` (plain strings, not JSON). Re-seeding creates new user ids, so old tokens stop working. `getByText` also finds hidden copies (the auth board panel is `display:none` on phones), so scope locators to `#main`. The installed Chromium build is 1254; launch it with `executablePath`.
 
-Screenshots for the record live in `docs/screenshots/` as `<role>-<screen>-<width>-<theme>.jpg`; they are retaken from the React app in Stage 5.
+Screenshots for the record live in `docs/screenshots/` as `<role>-<screen>-<width>-<theme>.jpg` (21 screens x 3 widths x 2 themes, taken from the React app in Stage 5; phone shots size the window to the page so the fixed bottom bar sits at the bottom; dialog shots are the viewport only). The Stage 5 audit (axe-core on every render, keyboard walk, 200% text) is `docs/stage5-audit.md`; axe-core is in the npx cache, loaded by the scratchpad script, never added to `package.json`.
 
 Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `farhan@` (recipients), `kiran@` / `meera@` (volunteers), `rohit@` (pending recipient), all at `foodloop.test`.
 
@@ -60,7 +60,7 @@ Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `
 
 - Build in the five stages of the React rewrite (listed in `PROGRESS.md`). Stop after each stage and wait for the user to test it.
 - Commit at the end of each stage (e.g. `React Stage 1: setup, design tokens, gallery, auth and routing`), then **commit and push to origin (`https://github.com/vamsikrishna639/FoodLoop`) after every completed stage, never use `--force`, and check for secrets before each push**: `git ls-files` shows no `.env` (only `.env.example`), and no real `JWT_SECRET` or database password is in a tracked file or in the commits being pushed. If origin has commits the local branch lacks, ask before merging.
-- Before every commit, update `CLAUDE.md`, `README.md`, `PROGRESS.md` (and `VALIDATION.md` when a form changes) so they match the code, and commit them together with the work. Do not commit `VIVA_NOTES.md` (the user's own file) unless asked.
+- Before every commit, update `CLAUDE.md`, `README.md`, `PROGRESS.md` (and `VALIDATION.md` when a form changes) so they match the code, and commit them together with the work. `VIVA_NOTES.md` is the user's viva script; it was committed in Stage 5 at the user's request. Keep its line references true when the code they point at changes, and keep it free of the old toolkit.
 - The Impeccable design hook is installed (`.impeccable/config.json`, committed; `config.local.json` and `.claude/settings.local.json` are git-ignored). It scans each edited UI file and reports deterministic design issues; act on them. Do not run `npx impeccable update` unless the user asks.
 - Each `impeccable shape` round may ask one short question; the user answers it and expects the stage to continue without another stop.
 - End each stage with: the commands to run, a checklist of exactly what to click and what should appear, and a list of assumptions made.
@@ -88,7 +88,7 @@ Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `
 
 ## Frontend architecture
 
-- `src/main.jsx` wraps the router in `ThemeProvider` > `ToastProvider` > `AuthProvider`. `src/App.jsx` holds every route (`createBrowserRouter`) and wraps each in a gate from `src/routes/Gate.jsx`: `PublicOnly` (welcome, login, register), `PendingOnly` (/pending), `RequireApproved` (everything in the shell; also checks the role's allowed paths). `/gallery` is open to everyone.
+- `src/main.jsx` wraps the router in `ThemeProvider` > `ToastProvider` > `AuthProvider`. `src/App.jsx` holds every route; every page is `React.lazy(() => import(...))` (code splitting by route), with a `<Suspense>` in `Root` (fallback `Splash`) and one around the shell's `<Outlet />` (fallback `PageLoading`, so the navigation stays). A new page must be added as a `lazy()` import. `vite.config.js` names the library chunks (`react`, `motion`, `forms`) with `build.rolldownOptions.output.codeSplitting.groups`; Recharts stays in the lazily loaded chart. The build must not show the 500 kB warning. Routes use `createBrowserRouter`; each is wrapped in a gate from `src/routes/Gate.jsx`: `PublicOnly` (welcome, login, register), `PendingOnly` (/pending), `RequireApproved` (everything in the shell; also checks the role's allowed paths). `/gallery` is open to everyone.
 - Pages never navigate after login or logout. They change `AuthContext`, and the gates redirect. `AuthContext.status` is `restoring` (splash at the same URL, so a refresh keeps the page), `signedOut` or `signedIn`. After sign-in, `PublicOnly` returns to `location.state.from` if a gate saved one.
 - `src/api/client.js` is the only HTTP entry point. It attaches the JWT, unwraps the envelope, throws `ApiError` (`status`, `fieldErrors`), times out after 12s, and calls the unauthorized handler on a 401 when a token is set (AuthContext logs out with `sessionExpired`). One file per resource in `src/api/` (`auth.js`, `dashboard.js` ...).
 - The token, theme and welcome flag are in localStorage (`src/lib/storage.js`, every access in try/catch). `index.html` applies the saved theme before the first paint.
@@ -112,6 +112,15 @@ Seeded logins all use `password123`: `admin@`, `canteen@` (donor), `ananya@` / `
 - Volunteer (`pages/volunteer/Pickups.jsx`): `RunTabs` (Assigned / On the way / Delivered as one strip, fits 360), each run a `ReceiptTimeline` pickup slip (Pickup by second), one 56px ink button per step, "Can't do this run" asks first. Runs moved on this visit stay in their tab (`movedHere`); old handed-back runs are hidden. Tally (`ImpactNumber`) beside from an 820px container.
 - Alerts (`pages/common/Alerts.jsx`, `lib/notification.js` `alertWord`, `alertTarget(type, role)`): grouped by day; a line is a link when it leads somewhere, a button while unread, plain text otherwise.
 - Admin: `pages/admin/Overview.jsx` (queue first when requests were waiting at load, decided once; `ImpactBlock` with the lazily loaded `components/DeliveriesChart.jsx` (Recharts, `lazy()` so it is a separate chunk); `RightNow` receipt), `AssignVolunteer.jsx` (radio rows, quietest preselected, `validation/assignRules.js`), `Approvals.jsx` (a real `<table>` from the `register:` breakpoint, 640px window; slips below; Reject asks first). API files: `api/pickups.js`, `api/users.js`, `api/notifications.js`.
+
+## Accessibility rules (from the Stage 5 audit)
+
+- Name a control by its visible text. Do not put an `aria-label` on a button or link that shows text (WCAG 2.5.3): add hidden words with `sr-only` only for state or the action ("Alerts 2 unread", "Edit"), without leading punctuation (a hidden span is its own block, so ", x" reads as " , x"). Icon-only controls keep their `aria-label`.
+- Put the most important text first in the code (`TokenCard` has the title first and draws the marker row above it with `order-first`), so a button's name starts with it.
+- A region that scrolls on its own needs `tabIndex={0}` (the Activity rail). Anything `aria-hidden` that contains SVG or third-party markup is also `inert` (the chart).
+- A dialog whose content loads after it opens moves focus to the first real control once loaded (`AssignVolunteer`).
+- Labels wrap, never truncate, on buttons (`Button` has `py-2 max-w-full`); grids that hold text use rem-based minimum columns so large text drops a column instead of scrolling sideways. Page titles hyphenate.
+- Small text on a tinted fill uses `ink`; the food-type colours and `ink-soft` fall below 4.5:1 on their own tints in the dark theme.
 
 ## Design rules that are easy to break
 

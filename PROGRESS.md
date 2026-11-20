@@ -1,22 +1,23 @@
 # FoodLoop — Progress
 
-Updated on 2026-11-20 at the end of React Stage 4.
+Updated on 2026-11-20 at the end of React Stage 5.
 
 ## Current stage
 
 The frontend is being rebuilt in **React (Vite, JavaScript)** against the
-existing, unchanged backend. **Stages 1 to 4 of 5 are complete, committed
-and pushed to origin.** Stages 1 to 3 were tested and approved by the
-user; waiting for the user to test Stage 4. Each stage is pushed when it is
-committed (after a secret check).
+existing, unchanged backend. **All five stages are complete, committed
+and pushed to origin.** Stages 1 to 4 were tested and approved by the
+user; waiting for the user to test Stage 5. Each stage is pushed when it is
+committed (after a secret check). The final cleanup (below) waits until
+the user says the project is finished.
 
 | Stage | Contents | Status |
 |---|---|---|
 | 1 | Setup, design tokens, component gallery, auth + routing, responsive shell | Done, approved |
 | 2 | Food listings: recipient counter + detail, donor board, post / edit / delete, Listings | Done, approved |
 | 3 | Claims: request form, approve with stamp drop, turn down, cancel, My requests receipts | Done, approved |
-| 4 | Volunteer pickups, alerts + badge, live 20s refresh, activity feed, admin overview + Recharts chart, approvals and assign dialog | Done |
-| 5 | `/impeccable audit` + `polish`, `review-animations`, screenshots, VALIDATION.md complete, README | Next |
+| 4 | Volunteer pickups, alerts + badge, live 20s refresh, activity feed, admin overview + Recharts chart, approvals and assign dialog | Done, approved |
+| 5 | Route code splitting, `/impeccable audit` + `polish`, keyboard and contrast checks, screenshots, README demo script, VALIDATION.md, VIVA_NOTES.md | Done |
 
 The backend is complete (all five stages of the original build). It has not
 been changed in the rewrite. CORS: `app.use(cors())` already allows
@@ -31,6 +32,83 @@ hook was installed (`impeccable hooks on`: `.impeccable/config.json` is
 committed; the consent file and `.claude/settings.local.json` are
 git-ignored). Doctor now reports nothing. Impeccable was not updated (the
 user said not to).
+
+## Done in Stage 5
+
+- **Code splitting by route:** every page is `React.lazy` in `App.jsx`;
+  `<Suspense>` at the root (splash) and inside the shell ("Opening the
+  page...", the navigation stays); named library chunks in
+  `vite.config.js`. Main file 733 kB -> the app's own code 60 kB, React
+  317 kB, motion 161 kB, forms 35 kB (cached separately), 2-23 kB per page,
+  the chart 373 kB only on the admin Overview. No size warning.
+- **`/impeccable audit`** over the rendered app (report in
+  `docs/stage5-audit.md`: 16/20 found, 19/20 after fixes) and the fixes
+  (`polish`):
+  - Label in Name (WCAG 2.5.3): token cards, the Alerts link with its
+    badge, the rail's profile link, alert lines and chalkboard lines are
+    named by their own text (no `aria-label`); the token title comes first
+    in the code (`order-first` keeps the marker row on top), so the name
+    now includes portions and the deadline.
+  - Contrast: the 8px "TOKEN" caption on the ticket block was 3.97:1 in
+    the dark theme; now ink.
+  - Keyboard: the Activity rail can be focused and scrolled; the hidden
+    chart is `inert` (Chrome had made a Recharts layer focusable); the
+    Assign dialog moves focus to the chosen volunteer once the list loads
+    (it had stayed on Not now).
+  - Heading order on Pending and Profile (slips are h2).
+  - Large text (200%): buttons wrap their label instead of truncating, the
+    receipt title row and alert kind/time row wrap, the role picker uses
+    rem-based columns (one column at large text, at most two), page titles
+    hyphenate.
+  - Theming: the chalkboard leader colour is a token (`color-mix` of
+    chalk-soft); the date boxes highlight the part being typed in turmeric,
+    not system blue.
+- **Keyboard and contrast on every screen:** axe-core (WCAG 2.2 AA + best
+  practice) on 21 screens x 3 widths x 2 themes, a Tab walk on every
+  screen at 1440 and 360, focus rings checked by eye where a script cannot
+  judge (radio tags, date boxes).
+- **Screenshots:** `docs/screenshots/` replaced with 126 images of the
+  React app (`<role>-<screen>-<width>-<theme>.jpg`), axe-clean.
+- **Postman collection:** already complete (80 requests, 231 checks,
+  including over-allocation, wrong role, invalid status changes and no
+  token); run again against a fresh test database: 0 failures. README
+  notes that Thunder Client imports it but runs Postman scripts only in
+  Postman or newman.
+- **Docs:** README (build status, demo script corrected after running it in
+  the browser, accessibility and screenshot section, bundle table,
+  layout), VALIDATION.md (assign focus, Stage 5 checks), VIVA_NOTES.md
+  (frontend sections rewritten for the React code with line numbers; new
+  sections on code splitting, form validation, live refresh, accessibility
+  and testing; committed at the user's request), CLAUDE.md (lazy pages,
+  accessibility rules), this file.
+- **`review-animations`** could not be started from here (the skill only
+  runs when the user starts it). Not imitated by hand; it is listed for the
+  user to run.
+
+## Verified in Stage 5
+
+Test API on 5050 with `foodloop_test` (reseeded before each run); Vite on
+**5176** (5174 and 5175 were in use, left alone). The user's API and
+database were not touched.
+
+- `npm run build`: no errors, no chunk-size warning; `impeccable detect
+  frontend/src`: no findings.
+- axe-core 4.14 on all 126 renders after the fixes: **0 violations**; no
+  horizontal overflow; no console errors.
+- Keyboard walk: every visible control reached on every screen at 1440 and
+  360; dialogs keep focus and close with Escape.
+- 200% text at 360 and 768 on 11 pages: no sideways scroll.
+- Accessible names read from the accessibility tree, e.g. "Chicken Biryani
+  Main Block Canteen Non-veg food Status: Available #FL-0005 12 of 20 boxes
+  left Pickup closes in 3h 54m"; "Alerts 6 unread".
+- Demo script through the UI on a fresh seed: Veg Pulao posted as
+  #FL-0011 (pickup default +3 h), Ananya asks for 4, Approve -> "6 left",
+  Farhan's sandwich slip offers no Approve after Ananya's 6 ("Only 6
+  packets left, fewer than this request asks for ..."), assign dialog
+  preselects Meera, Assign Kiran -> ASSIGNED, Kiran collects and delivers,
+  Ananya's receipt under Past shows DELIVERED and two alerts, the admin's
+  figure and the canteen's "Delivered, ever" go 112 -> 116.
+- newman: 80 requests, 231 assertions, 0 failed.
 
 ## Done in Stage 4
 
@@ -365,9 +443,11 @@ fixed until the next blur (now re-checked on change while shown).
 
 - Not tried on a real phone (only emulated widths); `navigator.vibrate` for the
   stamp drop is untested on Android.
-- The main JavaScript chunk is about 732 kB before gzip (Vite warns above
-  500 kB); the chart is already split out. More route-level splitting can
-  be added in Stage 5 if wanted.
+- Motion was not reviewed with the `review-animations` skill (user-run
+  only). The Stage 4 motion rules still hold (reduced motion checked per
+  component in earlier stages).
+- No screen-reader session (NVDA, TalkBack) was recorded; accessibility
+  was checked with axe-core, the accessibility tree and a keyboard walk.
 - The live refresh is polling every 20 s, not push: a change shows up
   within 20 s. The phone page of one token (`/home/listing/:id`) reads its
   listing once; the list and the side panel refresh.
@@ -384,10 +464,29 @@ fixed until the next blur (now re-checked on change while shown).
   `viewTransition`), not inspected frame by frame.
 - Small mono captions are uppercase by design, so "3m left" prints as
   "3M LEFT" on the board (the same as the previous app).
-- `docs/screenshots/` still holds the previous app's images; they are
-  replaced in Stage 5.
 - Restart nothing on the user's side: the test API on 5050 and the Vite server
   used for checks were stopped (see the final message of the stage).
+
+## Assumptions made (Stage 5)
+
+- **Code splitting with `React.lazy` + `<Suspense>`** (plain React, easy to
+  explain) rather than React Router's route `lazy` option. Named chunks for
+  React, motion and react-hook-form; Recharts stays in the chart's file.
+- **The Postman collection already met the brief** (all four negative
+  cases), so it was re-run, not rewritten. No separate Thunder Client file:
+  Thunder Client imports the Postman file.
+- **Accessible names follow the visible text** (WCAG 2.5.3), which makes
+  the token card's name longer but complete (it now includes the deadline).
+- **200% text** was tested by doubling the root font size (how a phone's
+  large-text setting behaves), at 360 and 768 px.
+- **The ticket block's tiny caption is ink**, not the food-type colour, to
+  pass 4.5:1 on its tint in both themes; the rule and initials keep the
+  colour.
+- **The old `docs/stage5-audit.md`** (the previous app's audit) was
+  replaced with the React audit; the screenshots were replaced as well.
+- **VIVA_NOTES.md:** sections 1-4 kept as written (only "Flutter app"
+  changed to the React app); sections 5-6 rewritten for the React code;
+  sections 7-10 added.
 
 ## Assumptions made (Stage 4)
 
@@ -473,11 +572,9 @@ fixed until the next blur (now re-checked on change while shown).
 
 ## Exact next step to resume
 
-Wait for the user to test Stage 4. Then Stage 5: `/impeccable audit` and
-`polish` across the app, `review-animations` (with reduced motion), retake
-`docs/screenshots/` from the React app (`<role>-<screen>-<width>-<theme>.jpg`),
-finish VALIDATION.md and README (demo script: donor -> recipient ->
-volunteer -> delivered), consider route-level code splitting.
+Wait for the user to test Stage 5 (and to run `/review-animations` if
+they want the motion review). Fix whatever they report. Then, only when the
+user says the project is finished, do the final task below.
 
 ## Final task (only when the user says the project is finished)
 
@@ -488,8 +585,9 @@ Remove every trace of the previous mobile toolkit and the screenshot tooling:
    PROMPT.md, PRODUCT.md, DESIGN.md, `docs/`) for "Flutter", "Dart", "fl_chart",
    "go_router", "pubspec" and similar, and rewrite or remove those passages.
    This includes the CORS comment in `backend/src/app.js` (it is on the CORS
-   line, the one backend change allowed) and the previous app's audit and
-   screenshot files in `docs/`.
+   line, the one backend change allowed). (The previous app's audit and
+   screenshots in `docs/` were already replaced with the React ones in
+   Stage 5; VIVA_NOTES.md was rewritten for React then too.)
 3. Make sure no Playwright setup is in the repo (no `playwright` dependency,
    config or script); remove the Playwright notes from CLAUDE.md.
 4. Remove project rule 2 from CLAUDE.md once it is satisfied.

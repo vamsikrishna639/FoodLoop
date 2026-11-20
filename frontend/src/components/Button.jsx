@@ -10,8 +10,11 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { useReducedMotion } from 'motion/react';
 
+// The label wraps rather than being cut off when the phone's text size is
+// large (py-2 keeps a two-line label off the edges); max-w-full keeps the
+// button inside its column.
 const BASE =
-  'press-scale inline-flex min-h-12 select-none items-center justify-center gap-2 rounded-control t-label-lg ' +
+  'press-scale inline-flex min-h-12 max-w-full select-none items-center justify-center gap-2 rounded-control py-2 text-center t-label-lg ' +
   'transition-[background-color,color,border-color,transform] duration-[120ms] ease-fl-out';
 
 const LOOKS = {
@@ -55,8 +58,8 @@ export default function Button({
         <Ticker label={loadingLabel} />
       ) : (
         <>
-          {Icon && <Icon size={20} weight="bold" aria-hidden="true" />}
-          <span className="truncate">{children}</span>
+          {Icon && <Icon size={20} weight="bold" aria-hidden="true" className="shrink-0" />}
+          <span className="min-w-0">{children}</span>
         </>
       )}
     </button>
@@ -67,8 +70,8 @@ export default function Button({
 export function ButtonLink({ variant = 'ink', expand = false, icon: Icon, className = '', children, ...props }) {
   return (
     <Link className={`${buttonClasses(variant, { expand })} ${className}`} {...props}>
-      {Icon && <Icon size={20} weight="bold" aria-hidden="true" />}
-      <span className="truncate">{children}</span>
+      {Icon && <Icon size={20} weight="bold" aria-hidden="true" className="shrink-0" />}
+      <span className="min-w-0">{children}</span>
     </Link>
   );
 }

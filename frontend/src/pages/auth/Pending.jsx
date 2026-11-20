@@ -66,6 +66,7 @@ export default function Pending() {
           <ReceiptTimeline
             className="max-w-[380px]"
             title={user.name}
+            headingLevel={2}
             heading="Account slip"
             stamp={<StatusStamp kind={rejected ? 'rejected' : 'pending'} />}
             entries={[

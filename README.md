@@ -19,7 +19,8 @@ The stack is MERN:
 
 ## Build status
 
-The backend is complete. The React frontend is being built in five stages.
+The backend and the React frontend are complete. The frontend was built in
+five stages.
 
 | Stage | Contents | Status |
 |---|---|---|
@@ -27,9 +28,9 @@ The backend is complete. The React frontend is being built in five stages.
 | 2 | Food listings: recipient counter and detail, donor board, post / edit / delete | Done |
 | 3 | Claims: request, approve (stamp drop), turn down, cancel; My requests | Done |
 | 4 | Volunteer pickups, alerts and the 20-second refresh, activity feed, admin overview with chart, approvals and assignment | Done |
-| 5 | Polish, audit, screenshots | Next |
+| 5 | Code splitting by route, accessibility and design audit and fixes, keyboard and contrast checks, screenshots, docs | Done |
 
-What works in the browser today:
+What the app does:
 
 - **First visit:** three welcome slides on phones; from 900px wide a split
   page with the real "portions delivered" figure from the API. Shown once per
@@ -105,9 +106,11 @@ What works in the browser today:
 - **Profile:** the member slip, the paper / chalkboard theme switch (saved in
   the browser) and Sign out.
 - **Component gallery** at `/gallery`, open without signing in.
-
-The demo script below needs all five stages; until then, steps 1 to 6 work
-only up to the pages that exist.
+- **Keyboard and screen readers:** every control is reachable with Tab and
+  shows a focus ring; dialogs keep focus inside and close with Escape;
+  after an action, focus moves to its result; status is always a word.
+  Every screen passes an automated WCAG 2.2 AA check (axe-core) in both
+  themes at 360, 768 and 1440 px (see Testing).
 
 ## What you need
 
@@ -236,50 +239,60 @@ What the seed sets up for the claim workflow:
 
 ## Demo script
 
-One full run from posting to delivery, about five minutes. Start from a
-fresh seed (`npm run seed`; the API can keep running) and open the app in
-Chrome. Sign out between steps from **Profile**, or use a
-second browser profile so two people are signed in side by side.
+One full run from posting to delivery, about five minutes: donor posts,
+recipient asks, donor approves, admin assigns, volunteer delivers. Start
+from a fresh seed (`npm run seed`; the API can keep running) and open the
+app in Chrome. Sign out between steps from **Profile**, or use a second
+browser profile so two people are signed in side by side (the other
+person's change then shows up within 20 seconds, without a reload).
+
+This script was run step by step in the browser on a fresh seed at the end
+of Stage 5; the numbers below are what it showed.
 
 1. **Canteen posts food.** Sign in as `canteen@foodloop.test`. Press
    **Post food**. Enter "Veg Pulao" in *What is it?*, keep *Veg*, quantity
    `10`, *plates*, leave the times as they are (prepared now, pickup in three
-   hours) and press **Print token**. The slip appears on the chalkboard
-   "Today's Surplus" with its own number, e.g. `#FL-0011`.
+   hours) and press **Print token**. The line appears on the chalkboard
+   "Today's Surplus" with its own number: "Veg Pulao ... 10 left",
+   "#FL-0011 · 10 plates".
 2. **Recipient asks for a share.** Sign in as `ananya@foodloop.test`. On
    **Today's Counter** open the Veg Pulao token (scroll down: the list is
-   soonest deadline first). Press the plus button three times so it reads 4,
-   and press **Request 4 plates**. The area changes to "You asked for 4
-   plates" with a PENDING stamp.
+   soonest deadline first). Press the plus button (**More plates**) three
+   times so it reads 4, and press **Request 4 plates**. The area changes to
+   "You asked for 4 plates" with a PENDING stamp.
 3. **Canteen approves.** Sign in as the canteen again. Under **Requests** on
    the Board, find Ananya's 4 plates of Veg Pulao and press **Approve**. The
    APPROVED stamp drops onto the slip (the one animation kept for this
    moment). The chalkboard line now shows 6 left.
    *To show the over-allocation guard here:* Ananya's 6 and Farhan's 8
    packets of Veg Grilled Sandwiches are both pending on a 12-packet token.
-   Approve one, then the other: the second is refused ("Only 6 packets
-   left, but this request asks for 8 packets" if Ananya's went first), and
-   it stays pending.
+   Approve Ananya's: Farhan's slip no longer offers Approve and says "Only
+   6 packets left, fewer than this request asks for, so it can only be
+   turned down". The server refuses such an approval as well (a page left
+   open from before gets "Only 6 packets left, but this request asks for 8
+   packets"); the Postman collection proves it with a direct API call.
 4. **Admin assigns a volunteer.** Sign in as `admin@foodloop.test`. On
    **Overview**, **Needs a volunteer** lists the Veg Pulao request (under
    Farhan's dal from the seed, oldest approval first). Press
-   **Assign volunteer**, choose **Kiran Kumar** (the button reads "Choose a
-   volunteer" until you do) and press **Assign Kiran**. The slip gets an
-   ASSIGNED stamp.
+   **Assign volunteer**. The dialog lists the approved volunteers, the
+   least busy first and already chosen (the button reads **Assign Meera**).
+   Choose **Kiran Kumar**; the button changes to **Assign Kiran**. Press it:
+   the slip gets an ASSIGNED stamp and "Kiran Kumar will collect it".
 5. **Volunteer collects and delivers.** Sign in as `kiran@foodloop.test`
    (works best at phone width: Chrome DevTools, device toolbar). On
-   **Pickups** (the Assigned tab, newest first), the Veg Pulao slip shows what to carry, from where,
-   to whom and their phone. Press **I've collected it** (PICKED UP stamp),
-   then **Mark delivered** (DELIVERED stamp).
+   **Pickups** (the Assigned tab, newest first), the Veg Pulao slip shows
+   what to carry (4 plates), the pickup deadline, from where, to whom and
+   their phone. Press **I've collected it** (PICKED UP stamp), then
+   **Mark delivered** (DELIVERED stamp, "Delivered. Thank you for the run").
 6. **Everyone sees the result.**
-   - Ananya: **My requests** prints the full receipt (Requested, Approved,
-     Volunteer Kiran Kumar, Picked up, Delivered) and "52 portions received
-     so far"; **Alerts** has "Kiran Kumar will collect your Veg Pulao" and
-     "Veg Pulao (4 plates) was delivered by Kiran Kumar"; tap one to open My
-     requests.
+   - Ananya: **My requests**, **Past** tag, prints the full receipt
+     (Requested, Approved, Volunteer Kiran Kumar, Picked up, Delivered) with
+     a DELIVERED stamp; **Alerts** has "Kiran Kumar will collect your Veg
+     Pulao" and "Veg Pulao (4 plates) was delivered by Kiran Kumar"; select
+     one to open My requests.
    - Admin: the portions-delivered figure goes from 112 to 116 and today's
      bar on the 7-day chart grows by 4.
-   - Canteen: "Delivered, ever" on the Board tally goes up by 4.
+   - Canteen: "Delivered, ever" on the Board tally goes from 112 to 116.
 
 Food counts as delivered only at step 5. Until then every figure stays the
 same, which is business rule 4.
@@ -328,6 +341,29 @@ expressed in a collection that runs one request at a time. It was checked in
 Stages 3 and 4 with a Node script that fired both requests together: exactly
 one succeeds.
 
+Thunder Client imports the same file (Collections > Import) and can send
+every request; the checks are Postman scripts (`pm.test`), so run them in
+Postman or with `npm run test:api`.
+
+### Accessibility, keyboard and screenshots (Stage 5)
+
+At the end of Stage 5 every screen (21, including the Post food and
+Assign volunteer dialogs) was opened in headless Chrome as each role, at
+360, 768 and 1440 px wide, in both themes, and checked automatically:
+
+- **axe-core 4.14** (WCAG 2.0 / 2.1 / 2.2 A and AA rules plus best
+  practice, including colour contrast): **0 violations** on every screen.
+- **No horizontal scroll** and **no console errors** at any size.
+- **Keyboard walk:** Tab from the top of each page to the end: every
+  visible control is reached, in reading order, and each shows a focus
+  ring; in the dialogs focus stays inside and Escape closes them.
+- **Large text:** with the text size doubled (200%) at 360 and 768 px, no
+  page scrolls sideways; buttons and headings wrap instead of being cut.
+
+The fixes this found are listed in `docs/stage5-audit.md`. The screenshots
+are in `docs/screenshots/`, named `<role>-<screen>-<width>-<theme>.jpg`
+(for example `donor-board-360-dark.jpg`).
+
 ### Component gallery
 
 Open `http://localhost:5173/gallery` (no login needed). It shows every
@@ -362,7 +398,8 @@ frontend/
   index.html          applies the saved theme before the first paint
   src/
     main.jsx          providers (theme, slip messages, auth) around the router
-    App.jsx           every route and the gate that guards it
+    App.jsx           every route and the gate that guards it; each page is
+                      loaded on its first visit (React.lazy, code splitting)
     config.js         reads VITE_API_URL
     api/              client.js (the one fetch wrapper) and one file per resource
     context/          AuthContext, ThemeContext, ToastContext (slip messages),
@@ -387,6 +424,11 @@ frontend/
                       (Overview, AssignVolunteer, Approvals), common (Alerts)
     styles/index.css  the design tokens (CSS variables), Tailwind theme,
                       type scale and the paper shapes
+  vite.config.js      dev server port and the named library chunks
+
+docs/
+  screenshots/        every screen, 360 / 768 / 1440, light and dark
+  stage5-audit.md     the Stage 5 audit: what was checked, found and fixed
 ```
 
 ## API
@@ -479,5 +521,18 @@ cd frontend
 npm run build
 ```
 
-The build must finish without errors. The backend is checked with the
-Postman collection (see Testing).
+The build must finish without errors (and without the "chunk larger than
+500 kB" warning). Each page is its own JavaScript file, loaded the first
+time it is opened, so signing in downloads only what that page needs:
+
+| File | Size (minified) | Loaded |
+|---|---|---|
+| `index-*.js` (the app's own shared code) | about 60 kB | always |
+| `react-*.js` (React, React DOM, React Router) | about 317 kB | always |
+| `motion-*.js` | about 161 kB | always |
+| `forms-*.js` (react-hook-form) | about 35 kB | pages with a form |
+| one file per page (`Counter-*.js`, `Board-*.js` ...) | 2 to 23 kB | that page |
+| `DeliveriesChart-*.js` (Recharts) | about 373 kB | only the admin Overview |
+
+Before the split everything was one 733 kB file. The backend is checked
+with the Postman collection (see Testing).

@@ -144,7 +144,7 @@ function AlertLine({ alert: n, target, onOpen }) {
         />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="flex items-baseline justify-between gap-3">
+        <span className="flex flex-wrap items-baseline justify-between gap-x-3">
           <span className="font-bold text-ink t-mono-sm">
             {alertWord(n.type)}
             {unread && <span className="text-chilli-deep"> · New</span>}
@@ -164,25 +164,29 @@ function AlertLine({ alert: n, target, onOpen }) {
             <ArrowRightIcon size={16} weight="bold" aria-hidden="true" />
           </span>
         )}
+        {/* What selecting an unread line without a page does, for screen
+            readers (sighted users see the dot go). */}
+        {!target && unread && <span className="sr-only">Mark as read</span>}
       </span>
     </span>
   );
 
   const box =
     'block w-full rounded-stamp px-1 py-4 text-left transition-colors duration-[120ms] hover:bg-sunken min-h-12';
-  // "Unread." first, so a screen reader hears the state before the message.
-  const label = `${unread ? 'Unread. ' : ''}${n.message} ${when}`;
+  // No aria-label: the line is named by its own text ("Request approved ·
+  // New, 12 min ago, <message>, Open My requests"), so what is read is what
+  // is shown (WCAG 2.5.3).
 
   let line;
   if (target) {
     line = (
-      <Link to={target.path} onClick={onOpen} aria-label={`${label}. Open ${target.page}`} className={box}>
+      <Link to={target.path} onClick={onOpen} className={box}>
         {inner}
       </Link>
     );
   } else if (unread) {
     line = (
-      <button type="button" onClick={onOpen} aria-label={`${label}. Mark as read`} className={box}>
+      <button type="button" onClick={onOpen} className={box}>
         {inner}
       </button>
     );

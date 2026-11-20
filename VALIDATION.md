@@ -179,6 +179,9 @@ Details:
   (`GET /users?role=volunteer&status=approved`), quietest first, each with
   "Free" or "Carrying 1 run". The quietest is chosen already (the admin can
   pick another); arrow keys move between them (real radio inputs).
+- The dialog opens before the list arrives, so the browser first puts focus
+  on Not now; once the volunteers are shown, focus moves to the chosen one
+  (Stage 5), so Enter assigns them straight away.
 - The rule still guards the form: with no choice (e.g. the list was empty
   when it loaded) a submit shows "Choose a volunteer" under the list and
   focuses the first option; choosing one clears it at once. The button
@@ -206,3 +209,16 @@ server's own sentence, and the page reads its data again:
 - Alerts: marking read cannot fail visibly; if the server refuses, the list
   is read again so the screen shows the truth. "Mark all read" failures are
   a slip.
+
+## Checked in Stage 5
+
+Every form above was opened in headless Chrome at 360, 768 and 1440 px in
+both themes and checked with axe-core (WCAG 2.2 AA): no violations. Each
+field has a visible `<label>`, errors are linked with `aria-describedby`
+and marked `aria-invalid`, and the radio tags (food type, unit, role,
+volunteer) are real radio inputs in a `fieldset` with a `legend`. A
+keyboard walk reached every field and button in order, each with a focus
+ring (the radio tags draw it on their tag; the date boxes show a 2px ink
+edge and a turmeric highlight on the part being typed). With the text size
+doubled the forms wrap instead of scrolling sideways (the role picker drops
+to one column). No rule changed in Stage 5.

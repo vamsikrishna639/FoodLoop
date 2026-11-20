@@ -41,7 +41,7 @@ export function ChalkItem({ name, trailing, note }) {
         <p className="t-title-lg text-chalk [overflow-wrap:anywhere]">{name}</p>
         {note && <p className="text-chalk-soft t-mono-sm">{note}</p>}
       </div>
-      <span className="leader mb-1.5 min-w-4 flex-1 [--dot:rgb(169_163_151_/_0.5)]" aria-hidden="true" />
+      <span className="leader mb-1.5 min-w-4 flex-1 [--dot:color-mix(in_srgb,var(--fl-chalk-soft)_50%,transparent)]" aria-hidden="true" />
       <p className="shrink-0 text-right text-chalk t-mono font-bold">{trailing}</p>
     </div>
   );

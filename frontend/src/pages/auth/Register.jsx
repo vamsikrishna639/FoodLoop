@@ -54,7 +54,10 @@ export default function Register() {
         >
           <legend className="mb-2 text-ink t-title-sm">I am joining as</legend>
           {/* The gap is wider than two notches, so neighbouring cut-outs never touch. */}
-          <div className="grid grid-cols-1 gap-x-6 gap-y-3 min-[340px]:grid-cols-2">
+          {/* Two columns when each can be at least 9rem wide, otherwise one.
+              In rem, so a phone set to large text gets one column instead
+              of words cut off; max(..., half) stops it at two columns. */}
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(max(9rem,calc((100%-1.5rem)/2)),1fr))] gap-x-6 gap-y-3">
             {['donor', 'recipient', 'volunteer', 'admin'].map((value) => (
               <RoleSlip
                 key={value}

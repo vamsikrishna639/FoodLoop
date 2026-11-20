@@ -8,7 +8,7 @@
 // The page itself is the router's <Outlet />. It cross-fades on navigation
 // (opacity only, so it stays under reduced motion, just shorter), and focus
 // moves to the page so screen-reader users hear where they arrived.
-import { useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { motion, useReducedMotion } from 'motion/react';
 import { MagnifyingGlassIcon, PlusIcon } from '@phosphor-icons/react';
@@ -89,14 +89,25 @@ export default function ResponsiveShell() {
             animate={{ opacity: 1 }}
             transition={{ duration: reduced ? DURATION.fast : DURATION.base, ease: EASE.out }}
           >
-            <Outlet />
+            {/* Each page is its own file (App.jsx); while the first visit
+                to a page downloads it, the navigation stays and this line
+                shows in the page's place. */}
+            <Suspense fallback={<PageLoading />}>
+              <Outlet />
+            </Suspense>
           </motion.div>
         </main>
 
         {/* As with the sidebar, the outer column carries the dividing line
             for the full page height; the rail itself sticks to the top. */}
         <div className="hidden w-[304px] shrink-0 border-l border-line desktop:block">
-          <aside aria-label="Activity" className="sticky top-0 h-dvh overflow-y-auto">
+          {/* tabIndex 0: the rail scrolls on its own, so keyboard users
+              need to be able to focus it to scroll it with the arrow keys. */}
+          <aside
+            aria-label="Activity"
+            tabIndex={0}
+            className="sticky top-0 h-dvh overflow-y-auto focus-visible:-outline-offset-2"
+          >
             {wide && <ActivityRail />}
           </aside>
         </div>
@@ -111,6 +122,15 @@ export default function ResponsiveShell() {
 // Tablet rail and desktop sidebar. Both are styled as the canteen menu board,
 // so they stay dark in light mode too.
 // ---------------------------------------------------------------------------
+
+/** Shown in the page's place while a page's file downloads (first visit only). */
+function PageLoading() {
+  return (
+    <p role="status" className="px-4 pt-6 text-ink-soft t-mono-sm tablet:px-6 desktop:px-10">
+      Opening the page...
+    </p>
+  );
+}
 
 function SideNav({ user, destinations, action, unread }) {
   // The outer column paints the board colour for the full height of the
@@ -145,17 +165,19 @@ function SideNav({ user, destinations, action, unread }) {
             <li key={d.path}>
               <NavLink
                 to={d.path}
-                aria-label={d.badge && unread > 0 ? `${d.label}, ${unread} unread` : undefined}
                 className={({ isActive }) =>
                   `flex min-h-12 flex-col items-center justify-center gap-1 rounded-control px-1 py-2 transition-colors duration-[120ms] desktop:flex-row desktop:justify-start desktop:gap-3 desktop:px-3 ${
                     isActive ? 'bg-chalk font-bold text-board' : 'font-medium text-chalk hover:bg-chalk/8'
                   }`
                 }
               >
-                <BadgedIcon icon={d.icon} count={d.badge ? unread : 0} />
+                {/* The label comes first in the code and the icon is drawn
+                    first (order-first), so the link's name reads
+                    "Alerts 2 unread" (BadgedIcon) and matches what is shown. */}
                 <span className="max-w-full truncate t-label-sm text-current desktop:t-title-md desktop:font-[inherit]">
                   {d.label}
                 </span>
+                <BadgedIcon icon={d.icon} count={d.badge ? unread : 0} />
               </NavLink>
             </li>
           ))}
@@ -163,13 +185,16 @@ function SideNav({ user, destinations, action, unread }) {
 
         <NavLink
           to="/profile"
-          aria-label={`Profile and settings for ${user.name}`}
           className="mt-2 flex min-h-14 items-center gap-3 rounded-control p-2 transition-colors duration-[120ms] hover:bg-chalk/8"
         >
-          <span className="grid size-10 shrink-0 place-items-center rounded-full border-[1.5px] border-chalk-soft font-bold text-chalk t-mono">
+          {/* Named by its text: "Profile and settings, Ananya Rao,
+              Recipient". On the rail only the initials show; the name is
+              then read but not drawn (sr-only until desktop). */}
+          <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full border-[1.5px] border-chalk-soft font-bold text-chalk t-mono">
             {initials(user.name)}
           </span>
-          <span className="hidden min-w-0 desktop:block">
+          <span className="sr-only">Profile and settings, </span>
+          <span className="sr-only min-w-0 desktop:not-sr-only desktop:block">
             <span className="block truncate text-chalk t-title-sm">{user.name}</span>
             <span className="block text-chalk-soft t-mono-sm">{ROLES[user.role]?.label}</span>
           </span>
@@ -226,15 +251,15 @@ function BottomItem({ destination: d, unread }) {
     <li className="min-w-0 flex-1">
       <NavLink
         to={d.path}
-        aria-label={d.badge && unread > 0 ? `${d.label}, ${unread} unread` : undefined}
         className={({ isActive }) =>
           `flex h-full flex-col items-center justify-center gap-1 ${isActive ? 'font-bold text-ink' : 'font-medium text-ink-soft'}`
         }
       >
         {({ isActive }) => (
           <>
-            <BadgedIcon icon={d.icon} count={d.badge ? unread : 0} />
+            {/* Label first in the code, icon drawn first (see SideNav). */}
             <span className="max-w-full truncate t-label-sm text-current [font-weight:inherit]">{d.label}</span>
+            <BadgedIcon icon={d.icon} count={d.badge ? unread : 0} />
             {/* A short ink dash marks the current tab (shape, not only colour).
                 Not animated: tabs are tapped many times a day, and the page's
                 own cross-fade already confirms the change. */}
@@ -249,14 +274,16 @@ function BottomItem({ destination: d, unread }) {
 /** An icon with an optional unread count in the corner. */
 function BadgedIcon({ icon: Icon, count }) {
   return (
-    <span className="relative inline-flex">
+    <span className="relative order-first inline-flex">
       <Icon size={24} aria-hidden="true" />
       {count > 0 && (
+        // The number is part of the link's name; the hidden word after it
+        // makes it read "Alerts 2 unread".
         <span
-          aria-hidden="true"
           className="absolute -right-2 -top-1.5 grid min-h-[18px] min-w-[18px] place-items-center rounded-full bg-chilli-deep px-1 font-mono text-[0.65625rem] font-bold leading-none text-on-chilli"
         >
           {count > 9 ? '9+' : count}
+          <span className="sr-only"> unread</span>
         </span>
       )}
     </span>

@@ -17,6 +17,7 @@ export default function Profile() {
       {/* The account, printed as a member slip with the role stamped on it. */}
       <ReceiptTimeline
         title={user.name}
+        headingLevel={2}
         heading="Member slip"
         stamp={<StatusStamp label={ROLES[user.role]?.label} ink="text-chilli-deep" />}
         entries={[

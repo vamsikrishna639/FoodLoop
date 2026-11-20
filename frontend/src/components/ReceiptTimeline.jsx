@@ -28,8 +28,8 @@ export default function ReceiptTimeline({
         {/* The title leads; the receipt type and number print under it. The
             stamp sits beside it, so a long title wraps instead of running
             underneath the stamp. */}
-        <div className="flex items-start gap-3">
-          <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+          <div className="min-w-0 flex-1 basis-40">
             <Title className="t-title-lg text-ink [overflow-wrap:anywhere]">{title}</Title>
             {/* The number never breaks in the middle ("#FL-" / "0006"). */}
             <p className="mt-1 text-ink-soft t-mono-sm">
