@@ -1,4 +1,4 @@
-// The frontend checks are never enough on their own: the server may still
+// The frontend checks are never enough on their own: the server 
 // refuse (a used email, "Only 3 boxes left", a listing that just closed).
 //
 // handleServerError(error, { setError, fields, showSlip })
